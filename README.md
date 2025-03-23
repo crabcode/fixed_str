@@ -1,6 +1,6 @@
-# Fixed String
+# fixed_string
 
-Fixed String is a Rust crate that provides a fixed–length, null–padded UTF‑8 string type. The type, `FixedStr<N>`, stores exactly N bytes and is designed to handle both safe UTF‑8 truncation and constant contexts (via a separate constructor).
+`fixed_string` is a Rust crate that provides a fixed–length, null–padded UTF‑8 string type. The type, `FixedStr<N>`, stores exactly N bytes and is designed to handle both safe UTF‑8 truncation and constant contexts (via a separate constructor).
 
 ## Features
 
