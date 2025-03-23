@@ -29,7 +29,7 @@ impl<const N: usize> fmt::Display for FixedStr<N> {
 
 impl<const N: usize> EffectiveBytes for FixedStr<N> {
   fn effective_bytes(&self) -> &[u8] {
-      &self.data[..self.len()]
+      &self[..self.len()]
   }
 }
 
@@ -133,7 +133,7 @@ impl<const N: usize> PartialEq<[u8]> for FixedStr<N> {
 
 impl<const N: usize> PartialEq<FixedStr<N>> for [u8] {
   fn eq(&self, other: &FixedStr<N>) -> bool {
-    &self[..self.len()] == &other[..self.len()]
+    self == other.effective_bytes()
   }
 }
 

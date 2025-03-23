@@ -203,7 +203,7 @@ impl<const N: usize> PartialEq<[u8]> for FixedStrBuf<N> {
 
 impl<const N: usize> PartialEq<FixedStrBuf<N>> for [u8] {
   fn eq(&self, other: &FixedStrBuf<N>) -> bool {
-    &self[..self.len()] == &other[..self.len()]
+    self == other.effective_bytes()
   }
 }
 

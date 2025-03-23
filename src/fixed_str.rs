@@ -101,6 +101,14 @@ impl<const N: usize> FixedStr<N> {
     Self { data: buf }
   }
 
+  /// Lossy version that creates a valid string.
+  pub fn from_slice_lossy(input: &[u8]) -> Self {
+    let mut buf = [0u8; N];
+    let truncated = Self::truncate_utf8_lossy(input, N);
+    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
+    Self { data: buf }
+  }
+
   //****************************************************************************
   //  Modifiers
   //****************************************************************************
@@ -139,9 +147,9 @@ impl<const N: usize> FixedStr<N> {
 
   /// Returns the string slice representation.
   ///
-  /// # Panic
+  /// # Panics
   /// 
-  /// Panics if not valid UTF-8.
+  /// This panics if not valid UTF-8.
   #[track_caller]
   pub fn as_str(&self) -> &str {
     self.try_as_str().expect("<invalid utf-8>")
@@ -175,9 +183,9 @@ impl<const N: usize> FixedStr<N> {
     self.data.iter().position(|&b| b == 0).unwrap_or(N)
   }
 
-  //**********************************************
+  //****************************************************************************
   //  Helper Functions
-  //**********************************************
+  //****************************************************************************
 
   /// Computes the maximum number of bytes from `input` that can be copied
   /// into a buffer of size `capacity` without splitting a multi-byte UTF‑8 character.
@@ -224,9 +232,9 @@ impl<const N: usize> FixedStr<N> {
     unsafe { str::from_utf8_unchecked(&bytes[..len]) }
   }
 
-  //**********************************************
+  //****************************************************************************
   //  STD Functions
-  //**********************************************
+  //****************************************************************************
 
   /// Formats a byte array into custom chunks
   #[cfg(feature = "std")]
@@ -257,11 +265,18 @@ impl<const N: usize> FixedStr<N> {
   /// Converts the `FixedStr` to an owned String.
   ///
   /// # Panics
+  /// 
   /// This panics if the effective string (up to the first zero)
   /// is not valid UTF‑8.
   #[cfg(feature = "std")]
   pub fn into_string(self) -> String {
     self.as_str().to_string()
+  }
+
+  /// Attempts to convert the `FixedStr` to an owned String.
+  #[cfg(feature = "std")]
+  pub fn try_into_string(self) -> Result<String, FixedStrError> {
+    self.try_as_str().map(str::to_string)
   }
 
   /// Converts the `FixedStr` to an owned String in a lossy manner,

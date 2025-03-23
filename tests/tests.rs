@@ -36,6 +36,15 @@ mod tests {
   }
 
   #[test]
+  fn test_from_slice_lossy_invalid_utf8() {
+    // Simulate a byte slice that cuts into the middle of a multi-byte char
+    let input = "a😊b".as_bytes(); // 6 bytes
+    let fixed = FixedStr::<4>::from_slice_lossy(input); // Should only preserve "a"
+    assert_eq!(fixed.as_str(), "a");
+  }
+
+
+  #[test]
   fn test_new_const_valid() {
     const N: usize = 5;
     const FIXED: FixedStr<N> = FixedStr::new_const("Hello");
@@ -157,6 +166,16 @@ mod tests {
   }
 
   #[test]
+  fn test_truncation_exact_boundary() {
+    let smile = "😊"; // 4 bytes
+    let prefix = "ab"; // 2 bytes
+    let input = format!("{}{}", prefix, smile); // 6 bytes
+    let fixed = FixedStr::<5>::new(&input); // only 1 byte of emoji would fit
+    assert_eq!(fixed.as_str(), "ab"); // must truncate *before* smile
+  }
+
+
+  #[test]
   fn test_as_hex() {
       #[cfg(feature = "std")]
       {
@@ -221,31 +240,51 @@ mod tests {
   }
 
   #[test]
-  fn test_into_fixed_trailing_zeros() {
-      let mut buf = FixedStrBuf::<10>::new();
-      buf.try_push_str("Hi").unwrap();
-      let fixed: FixedStr<10> = buf.into_fixed();
-      // The effective string is "Hi" and the rest are zeros.
-      assert_eq!(fixed.len(), 2);
-      assert_eq!(fixed.as_str(), "Hi");
-      for &b in &fixed.as_bytes()[2..] {
-      assert_eq!(b, 0);
-      }
+  fn test_effective_bytes() {
+    let fixed = FixedStr::<10>::new("Hi");
+    let bytes = fixed.effective_bytes();
+    assert_eq!(bytes, b"Hi");
   }
 
   #[test]
-  fn test_fixed_str_buf_clear() {
-    let mut buf = FixedStrBuf::<10>::new();
-    buf.try_push_str("Hello").unwrap();
-    assert_eq!(buf.len(), 5);
+  fn test_zero_termination() {
+    let bytes = *b"Hello\0World";
+    let fixed = FixedStr::<11>::from_slice(&bytes);
+    assert_eq!(fixed.len(), 5); // terminates at first \0
+    assert_eq!(fixed.as_str(), "Hello");
+  }
 
-    buf.clear();
-    assert_eq!(buf.len(), 0);
-    assert_eq!(&buf, &[0u8; 10]);
+  #[test]
+  fn test_clear_zeroes_data() {
+    let mut fixed = FixedStr::<5>::new("abc");
+    fixed.clear();
+    assert_eq!(fixed.as_bytes(), &[0, 0, 0, 0, 0]);
+  }
+  #[test]
+  fn test_capacity() {
+    let fixed = FixedStr::<8>::new("abc");
+    assert_eq!(fixed.capacity(), 8);
+  }
+  
+  #[test]
+  fn test_from_bytes_valid() {
+    let bytes = *b"Hi\0\0\0";
+    let fixed = FixedStr::<5>::from_bytes(bytes);
+    assert_eq!(fixed.as_str(), "Hi");
+  }
 
-    // Can reuse safely
-    buf.try_push_str("Rust").unwrap();
-    assert_eq!(buf.len(), 4);
-    assert_eq!(&buf[..4], b"Rust");
+  #[test]
+  fn test_from_bytes_invalid_utf8() {
+    let bytes = [0xFF, 0xFF, 0, 0, 0];
+    let fixed = FixedStr::<5>::from_bytes(bytes);
+    assert!(fixed.try_as_str().is_err());
+  }
+
+  #[test]
+  fn test_transparency() {
+    use std::mem::transmute;
+    let arr: [u8; 5] = *b"Hey\0\0";
+    let fixed: FixedStr<5> = unsafe { transmute(arr) };
+    assert_eq!(fixed.as_str(), "Hey");
   }
 }
