@@ -140,29 +140,28 @@ mod tests {
       const N: usize = 5;
       let fixed = FixedStr::<N>::new("Hello");
       assert_eq!(fixed, "Hello");
-      let s = "Hello";
-      assert_eq!(s, fixed);
+      assert_eq!("Hello", fixed);
   }
 
   #[test]
   fn test_error_display() {
-      let wrong_length_error = FixedStrError::WrongLength { expected: 5, found: 2 };
-      assert_eq!(
+    let wrong_length_error = FixedStrError::WrongLength { expected: 5, found: 2 };
+    assert_eq!(
       format!("{}", wrong_length_error),
       "Wrong length: expected 5 bytes, found 2 bytes"
-      );
-      let invalid_utf8_error = FixedStrError::InvalidUtf8;
-      assert_eq!(format!("{}", invalid_utf8_error), "Invalid UTF-8");
+    );
+    let invalid_utf8_error = FixedStrError::InvalidUtf8;
+    assert_eq!(format!("{}", invalid_utf8_error), "Invalid UTF-8");
   }
 
   #[test]
   fn test_truncate_utf8_lossy() {
-      // Use a multi-byte emoji and set max_len such that it would otherwise cut into the emoji.
-      let s = "a😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
-      let bytes = s.as_bytes();
-      // With max_len = 4, only "a" is valid.
-      let truncated = FixedStr::<4>::truncate_utf8_lossy(bytes, 4);
-      assert_eq!(truncated, "a");
+    // Use a multi-byte emoji and set max_len such that it would otherwise cut into the emoji.
+    let s = "a😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
+    let bytes = s.as_bytes();
+    // With max_len = 4, only "a" is valid.
+    let truncated = FixedStr::<4>::truncate_utf8_lossy(bytes, 4);
+    assert_eq!(truncated, "a");
   }
 
   #[test]
@@ -174,69 +173,40 @@ mod tests {
     assert_eq!(fixed.as_str(), "ab"); // must truncate *before* smile
   }
 
-
-  #[test]
-  fn test_as_hex() {
-      #[cfg(feature = "std")]
-      {
-      const N: usize = 5;
-      let fixed = FixedStr::<N>::new("Hello");
-      let hex = fixed.as_hex();
-      // "Hello" → [0x48, 0x65, 0x6C, 0x6C, 0x6F]
-      let expected = "48 65 6C 6C 6F";
-      assert_eq!(hex, expected);
-      }
-  }
-
-  #[test]
-  fn test_as_hex_dump() {
-      #[cfg(feature = "std")]
-      {
-      // Create a FixedStr with capacity larger than the string.
-      const N: usize = 16;
-      let fixed = FixedStr::<N>::new("Hello");
-      // With group size 8, first line contains "Hello" bytes plus trailing zeros.
-      // "Hello" is 5 bytes: 48 65 6C 6C 6F, then 3 zeros → "00 00 00"
-      // Second line is all zeros.
-      let expected = "48 65 6C 6C 6F 00 00 00\n00 00 00 00 00 00 00 00";
-      assert_eq!(fixed.as_hex_dump(), expected);
-      }
-  }
-
   #[test]
   fn test_try_push_str_success() {
-      let mut buf = FixedStrBuf::<10>::new();
-      assert!(buf.try_push_str("Hello").is_ok());
-      assert_eq!(buf.len(), 5);
+    let mut buf = FixedStrBuf::<10>::new();
+    assert!(buf.try_push_str("Hello").is_ok());
+    assert_eq!(buf.len(), 5);
   }
 
   #[test]
   fn test_try_push_str_fail() {
-      let mut buf = FixedStrBuf::<5>::new();
-      // "Hello, world!" is too long to push entirely.
-      let result = buf.try_push_str("Hello, world!");
-      assert!(result.is_err());
-      // The buffer remains unchanged on failure.
-      assert_eq!(buf.len(), 0);
+    let mut buf = FixedStrBuf::<5>::new();
+    // "Hello, world!" is too long to push entirely.
+    let result = buf.try_push_str("Hello, world!");
+    assert!(result.is_err());
+    // The buffer remains unchanged on failure.
+    assert_eq!(buf.len(), 0);
   }
 
   #[test]
   fn test_try_push_char_success() {
-      let mut buf = FixedStrBuf::<5>::new();
-      assert!(buf.try_push_char('A').is_ok());
-      assert_eq!(buf.len(), 1);
+    let mut buf = FixedStrBuf::<5>::new();
+    assert!(buf.try_push_char('A').is_ok());
+    assert_eq!(buf.len(), 1);
   }
 
   #[test]
   fn test_push_str_lossy() {
-      let mut buf = FixedStrBuf::<5>::new();
-      // "Hello" fits exactly, so push_str_lossy returns true.
-      assert!(buf.push_str_lossy("Hello"));
-      // Any additional push will result in truncation.
-      let result = buf.push_str_lossy(", world!");
-      assert!(!result);
-      let fixed: FixedStr<5> = buf.into_fixed();
-      assert_eq!(fixed.as_str(), "Hello");
+    let mut buf = FixedStrBuf::<5>::new();
+    // "Hello" fits exactly, so push_str_lossy returns true.
+    assert!(buf.push_str_lossy("Hello"));
+    // Any additional push will result in truncation.
+    let result = buf.push_str_lossy(", world!");
+    assert!(!result);
+    let fixed: FixedStr<5> = buf.into_fixed();
+    assert_eq!(fixed.as_str(), "Hello");
   }
 
   #[test]
@@ -286,5 +256,29 @@ mod tests {
     let arr: [u8; 5] = *b"Hey\0\0";
     let fixed: FixedStr<5> = unsafe { transmute(arr) };
     assert_eq!(fixed.as_str(), "Hey");
+  }
+  
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_as_hex() {
+    const N: usize = 5;
+    let fixed = FixedStr::<N>::new("Hello");
+    let hex = fixed.as_hex();
+    // "Hello" → [0x48, 0x65, 0x6C, 0x6C, 0x6F]
+    let expected = "48 65 6C 6C 6F";
+    assert_eq!(hex, expected);
+  }
+  
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_as_hex_dump() {
+    // Create a FixedStr with capacity larger than the string.
+    const N: usize = 16;
+    let fixed = FixedStr::<N>::new("Hello");
+    // With group size 8, first line contains "Hello" bytes plus trailing zeros.
+    // "Hello" is 5 bytes: 48 65 6C 6C 6F, then 3 zeros → "00 00 00"
+    // Second line is all zeros.
+    let expected = "48 65 6C 6C 6F 00 00 00\n00 00 00 00 00 00 00 00";
+    assert_eq!(fixed.as_hex_dump(), expected);
   }
 }
