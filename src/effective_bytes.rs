@@ -1,3 +1,5 @@
+// fixed_string/src/effective_bytes.rs
+
 use super::*;
 
 /// A trait that extracts the effective bytes from the type, i.e. up until the first `\0`.

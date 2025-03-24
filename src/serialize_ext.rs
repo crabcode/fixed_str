@@ -1,7 +1,7 @@
-// fixed_string/src/features.rs
+// fixed_string/src/serialize_ext.rs
 
 //******************************************************************************
-//  Binrw Serialization
+//  BinRW Serialization
 //******************************************************************************
 
 #[cfg(feature = "binrw")]
@@ -127,7 +127,7 @@ mod serde_tests {
   // Define a test struct that uses the as_bytes serialization.
   #[derive(Serialize, Deserialize, Debug, PartialEq)]
   struct ByteWrapper {
-    #[serde(with = "features::serde_as_bytes")]
+    #[serde(with = "serialize_ext::serde_as_bytes")]
     inner: FixedStr<5>,
   }
 

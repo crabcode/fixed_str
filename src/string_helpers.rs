@@ -12,17 +12,15 @@ pub const fn panic_on_zero(n: usize) {
 /// Finds the first `\0` byte in an array.
 ///
 /// Returns the index of the first `\0`, or the full length if none found.
-#[cfg(not(feature = "memchr"))]
 pub fn find_first_null(bytes: &[u8]) -> usize {
-  bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len())
-}
-
-/// Finds the first `\0` byte in an array, using speed-optimized `memchr`.
-///
-/// Returns the index of the first `\0`, or the full length if none found.
-#[cfg(feature = "memchr")]
-pub fn find_first_null(bytes: &[u8]) -> usize {
-  memchr(0, bytes).unwrap_or(bytes.len())
+  #[cfg(not(feature = "memchr"))]
+  {
+    bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len())
+  }
+  #[cfg(feature = "memchr")]
+  {
+    memchr(0, bytes).unwrap_or(bytes.len())
+  }
 }
 
 /// Finds the largest index (up to `max_len` and the effective end) such that

@@ -22,20 +22,26 @@ use std::vec::Vec;
 /// The core `FixedStr` library.
 pub mod fixed_str;
 /// Implementations for `FixedStr`.
-pub mod impls;
+pub mod fx_impl;
 /// A builder in `FixedStrBuf`.
-pub mod buffer;
+pub mod fx_buf;
+/// Custom error type for `FixedStr`.
+pub mod fx_error;
 /// A trait to expose the string's non-zero bytes.
-pub mod effective;
-/// Custom error type for `FixedStr` conversions.
-pub mod error;
-/// Feature implementations, like `binrw` or `serde`.
-pub mod features;
+pub mod effective_bytes;
+/// Optional integrations with `binrw` or `serde`.
+pub mod serialize_ext;
 /// Helper functions.
-pub mod util;
+pub mod string_helpers;
 
-pub use fixed_str::*;
-pub use buffer::FixedStrBuf;
-pub use effective::*;
-pub use error::FixedStrError;
-pub use util::*;
+pub use fixed_str::FixedStr;
+pub use fx_buf::FixedStrBuf;
+pub use fx_error::FixedStrError;
+pub use effective_bytes::{EffectiveBytes, EffectiveBytesIter};
+pub use string_helpers::{
+  panic_on_zero,
+  find_first_null,
+  find_valid_utf8_len,
+  find_valid_boundary,
+  truncate_utf8_lossy
+};

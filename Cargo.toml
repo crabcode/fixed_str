@@ -11,7 +11,7 @@ keywords = ["string", "utf8", "fixed-length", "no_std", "binrw"]
 categories = ["data-structures", "encoding", "no-std"]
 
 [features]
-default = ["std", "const_mut_refs", "memchr"]
+default = ["std", "const_mut_refs"]
 binrw = ["dep:binrw"]
 memchr = ["dep:memchr"]
 serde = ["dep:serde"]
@@ -20,7 +20,7 @@ std = []
 
 [dependencies]
 binrw = { version = ">=0.11.1", optional = true }  # uses Args<'a> (>=0.11.0) and BinRead/BinWrite (>=0.11.1)
-memchr = { version = "2.6.2", optional = true }
+memchr = { version = ">=0.1", optional = true }
 serde = { version = ">=1.0", features = ["derive"], optional =  true }
 
 [dev-dependencies]

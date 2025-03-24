@@ -1,7 +1,7 @@
-// fixed_string/src/impls.rs
+// fixed_string/src/fixed_string_impl.rs
 
-use core::usize;
 use super::*;
+use core::usize;
 
 impl<const N: usize> fmt::Debug for FixedStr<N> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

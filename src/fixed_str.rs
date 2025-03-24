@@ -1,3 +1,5 @@
+// fixed_string/src/fixed_str.rs
+
 use super::*;
 
 /// A fixed–length string with a constant size of `N` bytes.
@@ -200,7 +202,7 @@ impl<const N: usize> FixedStr<N> {
   pub fn set_lossy(&mut self, input: &str) {
     let valid = truncate_utf8_lossy(input.as_bytes(), N);
     let mut buf = [0u8; N];
-    buf[..valid.len()].copy_from_slice(&input.as_bytes()[..valid.len()]);
+    buf[..valid.len()].copy_from_slice(&valid.as_bytes());
     self.data = buf;
   }
 
