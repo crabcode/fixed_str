@@ -32,11 +32,17 @@ Add the following to your `Cargo.toml`:
 fixed_string = "0.2.1"
 ```
 
+Or run:
+
+```vim
+cargo add fixed_string --feature serde
+```
+
 Optional feature flags include:
 - **std** – Enables standard library–dependent conversions and formatting (enabled by default).
 - **serde** – For Serde serialization/deserialization.
 - **binrw** – For binary serialization support.
-- **const_mut_refs** – Workaround for some const function limitations.
+- **const_mut_refs** – Opt-in for `const_mut_refs` (enabled by default, disable for compatibility with rustc versions <1.83).
 
 ## Usage Examples
 
