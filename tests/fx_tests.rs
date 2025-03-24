@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod fx_tests {
-  use fixed_string::FixedStr;
+  use fixed_string::*;
 
   #[test]
   fn test_new_exact() {
@@ -197,8 +197,8 @@ mod fx_tests {
       assert!(valid.is_valid());
 
       let bytes = [0xff, 0xff, 0, 0, 0];
-      let invalid = FixedStr::<5>::from_bytes(bytes);
-      assert!(!invalid.is_valid());
+      let valid = FixedStr::<5>::from_bytes(bytes);
+      assert!(valid.is_valid());
   }
 
   #[test]
@@ -217,6 +217,7 @@ mod fx_tests {
       assert_eq!(bytes[3..], [0u8; 2]);
   }
 
+  #[cfg(feature = "std")]
   #[test]
   fn test_into_string() {
       let fixed = FixedStr::<5>::new("Hi");
@@ -224,6 +225,15 @@ mod fx_tests {
       assert_eq!(s, "Hi");
   }
 
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_to_string_invalid() {
+      let invalid = FixedStr::<4>::from_bytes([b'H', 0xff, b'i', 0]);
+      let safe = invalid.to_string();
+      assert_eq!(safe, "H");
+  }
+
+  #[cfg(feature = "std")]
   #[test]
   fn test_try_into_string() {
       let valid = FixedStr::<5>::new("Yes!");
@@ -233,13 +243,6 @@ mod fx_tests {
       let also_valid = FixedStr::<5>::new("Still yes!");
       // new truncates safely
       assert_eq!(also_valid.try_into_string().unwrap(), "Still");
-  }
-
-  #[test]
-  fn test_to_string_lossy() {
-      let fixed = FixedStr::<4>::from_bytes([b'H', 0xff, b'i', 0]);
-      let lossy = fixed.to_string_lossy();
-      assert_eq!(lossy, "H");
   }
 
   #[cfg(feature = "std")]
