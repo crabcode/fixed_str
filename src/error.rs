@@ -31,8 +31,6 @@ pub enum FixedStrError {
   },
   /// Returned when the byte content could not be parsed as valid UTF-8.
   InvalidUtf8,
-  /// Returned when a string is longer than the capacity.
-  Truncated,
 }
 
 impl fmt::Debug for FixedStrError {
@@ -45,7 +43,6 @@ impl fmt::Debug for FixedStrError {
             write!(f, "Overflow: remaining {}, found {}", remaining, found)
           },
           Self::InvalidUtf8 => write!(f, "InvalidUtf8"),
-          Self::Truncated => write!(f, "Truncated"),
       }
   }
 }
@@ -60,7 +57,6 @@ impl fmt::Display for FixedStrError {
             write!(f, "Overflow: tried to add {} bytes with only {} bytes remaining", found, remaining)
           },
           Self::InvalidUtf8 => write!(f, "Invalid UTF-8"),
-          Self::Truncated => write!(f, "Truncated"),
       }
   }
 }

@@ -101,7 +101,7 @@ The FixedStrBuf API provides:
 - `FixedStrBuf::try_push_char(&mut self, c: char) -> Result<(), FixedStrError>`: Appends a single character
 - `FixedStrBuf::push_str_lossy(&mut self, s: &str) -> bool`: Appends as many complete characters as possible
 - `FixedStrBuf::clear(&mut self)`: Resets the builder
-- `FixedStrBuf::into_fixed(self) -> FixedStr<N>`: Finalizes the builder, zero–padding any remaining capacity
+- `FixedStrBuf::finalize(self) -> FixedStr<N>`: Finalizes the builder, zero–padding any remaining capacity
 
 **Modifiers**
   - `set(&mut self, input: &str)`: Replace the content of the fixed string with a new value
@@ -110,10 +110,10 @@ The FixedStrBuf API provides:
 **Accessors**
   - `len() -> usize`: Returns the number of valid bytes (up to the first zero)
   - `capacity() -> usize`: Returns the total capacity
-  - `as_str() -> &str`: Returns a string slice (panics if the effective bytes aren’t valid UTF‑8)
+  - `as_str() -> &str`: Returns a string slice
   - `try_as_str() -> Result<&str, FixedStrError>`: Attempts to convert the stored bytes to a &str, returning an error if invalid
   - `as_bytes() -> &[u8]`: Access the underlying bytes
-        
+
 **Conversions (std only)**
   - `into_string() -> String`: Converts the FixedStr into an owned String
   - `to_string_lossy() -> String`: Converts to a String, replacing invalid UTF‑8 sequences with the Unicode replacement character

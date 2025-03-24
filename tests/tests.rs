@@ -36,13 +36,13 @@ mod tests {
   }
 
   #[test]
-  fn test_from_slice_lossy_invalid_utf8() {
+  fn test_from_slice_truncate_invalid_utf8() {
     // Simulate a byte slice that cuts into the middle of a multi-byte char
+    const N: usize = 4;
     let input = "a😊b".as_bytes(); // 6 bytes
-    let fixed = FixedStr::<4>::from_slice_lossy(input); // Should only preserve "a"
+    let fixed = FixedStr::<N>::from_slice(input); // Should only preserve "a"
     assert_eq!(fixed.as_str(), "a");
   }
-
 
   #[test]
   fn test_new_const_valid() {
@@ -55,17 +55,17 @@ mod tests {
   #[test]
   fn test_new_const_invalid_utf8() {
     // Using new_const with a multi-byte char and a capacity that forces a partial copy.
-    // "é" is two bytes in UTF‑8; with N = 1, new_const copies only the first byte.
+    // "é" is two bytes in UTF‑8; with N = 1, new_const discard rather than copy only the first byte.
     const N: usize = 1;
     let fixed = FixedStr::<N>::new_const("é");
-    assert!(fixed.try_as_str().is_err());
+    assert!(fixed.try_as_str().is_ok());
   }
 
   #[test]
   fn test_from_slice() {
     const N: usize = 5;
     let slice = b"Hello, world!";
-    let fixed = FixedStr::<N>::from_slice(slice);
+    let fixed = FixedStr::<N>::from_slice_unsafe(slice);
     // from_slice copies only N bytes, so we expect "Hello".
     assert_eq!(fixed.as_str(), "Hello");
   }
@@ -79,17 +79,25 @@ mod tests {
   }
 
   #[test]
-  fn test_try_from_slice_invalid_length() {
+  fn test_try_from_slice_unsafe() {
     const N: usize = 5;
-    let bytes = b"Hi";
-    let result = FixedStr::<N>::try_from(&bytes[..]);
-    assert!(result.is_err());
-    if let Err(FixedStrError::WrongLength { expected, found }) = result {
-      assert_eq!(expected, N);
-      assert_eq!(found, 2);
-    } else {
-      panic!("Unexpected error type");
-    }
+    let bytes = "Hell😊!".as_bytes();
+    let fixed = FixedStr::<N>::try_from(&bytes[..]).unwrap();
+    assert_eq!(fixed.as_str(), "Hell");
+  }
+  
+  #[test]
+  fn test_from_bytes_valid() {
+    let bytes = *b"Hi\0\0\0";
+    let fixed = FixedStr::<5>::from_bytes(bytes);
+    assert_eq!(fixed.as_str(), "Hi");
+  }
+
+  #[test]
+  fn test_from_bytes_invalid_utf8() {
+    let bytes = [0xFF, 0xFF, 0, 0, 0];
+    let fixed = FixedStr::<5>::from_bytes(bytes);
+    assert!(fixed.try_as_str().is_ok());
   }
 
   #[test]
@@ -108,15 +116,6 @@ mod tests {
     let debug_str = format!("{:?}", fixed);
     // Debug for valid UTF‑8 outputs a quoted string.
     assert_eq!(debug_str, "\"Hello\"");
-  }
-
-  #[test]
-  fn test_debug_format_invalid() {
-    // Create an invalid UTF‑8 FixedStr by using new_const that copies a partial multi-byte char.
-    const N: usize = 1;
-    let fixed = FixedStr::<N>::new_const("é");
-    let debug_str = format!("{:?}", fixed);
-    assert!(debug_str.contains("<invalid UTF-8>"));
   }
 
   #[test]
@@ -157,11 +156,11 @@ mod tests {
   #[test]
   fn test_truncate_utf8_lossy() {
     // Use a multi-byte emoji and set max_len such that it would otherwise cut into the emoji.
-    let s = "a😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
+    let s = "d😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
     let bytes = s.as_bytes();
-    // With max_len = 4, only "a" is valid.
-    let truncated = FixedStr::<4>::truncate_utf8_lossy(bytes, 4);
-    assert_eq!(truncated, "a");
+    // With max_len = 4, only "d" is valid.
+    let truncated = truncate_utf8_lossy(bytes, 4);
+    assert_eq!(truncated, "d");
   }
 
   #[test]
@@ -205,7 +204,7 @@ mod tests {
     // Any additional push will result in truncation.
     let result = buf.push_str_lossy(", world!");
     assert!(!result);
-    let fixed: FixedStr<5> = buf.into_fixed();
+    let fixed: FixedStr<5> = buf.finalize().unwrap();
     assert_eq!(fixed.as_str(), "Hello");
   }
 
@@ -219,7 +218,7 @@ mod tests {
   #[test]
   fn test_zero_termination() {
     let bytes = *b"Hello\0World";
-    let fixed = FixedStr::<11>::from_slice(&bytes);
+    let fixed = FixedStr::<11>::from_slice_unsafe(&bytes);
     assert_eq!(fixed.len(), 5); // terminates at first \0
     assert_eq!(fixed.as_str(), "Hello");
   }
@@ -230,24 +229,11 @@ mod tests {
     fixed.clear();
     assert_eq!(fixed.as_bytes(), &[0, 0, 0, 0, 0]);
   }
+
   #[test]
   fn test_capacity() {
     let fixed = FixedStr::<8>::new("abc");
     assert_eq!(fixed.capacity(), 8);
-  }
-  
-  #[test]
-  fn test_from_bytes_valid() {
-    let bytes = *b"Hi\0\0\0";
-    let fixed = FixedStr::<5>::from_bytes(bytes);
-    assert_eq!(fixed.as_str(), "Hi");
-  }
-
-  #[test]
-  fn test_from_bytes_invalid_utf8() {
-    let bytes = [0xFF, 0xFF, 0, 0, 0];
-    let fixed = FixedStr::<5>::from_bytes(bytes);
-    assert!(fixed.try_as_str().is_err());
   }
 
   #[test]
@@ -257,7 +243,7 @@ mod tests {
     let fixed: FixedStr<5> = unsafe { transmute(arr) };
     assert_eq!(fixed.as_str(), "Hey");
   }
-  
+
   #[cfg(feature = "std")]
   #[test]
   fn test_as_hex() {

@@ -57,6 +57,7 @@ mod binrw_tests {
 //  Serde Serialization
 //******************************************************************************
 
+/// Test module for `serde` integration.
 #[cfg(feature = "serde")]
 mod serde_ext {
   use crate::*;
@@ -97,15 +98,18 @@ mod serde_ext {
   }
 }
 
+/// Provides byte serialization for `serde`.
 #[cfg(feature = "serde")]
 pub mod serde_as_bytes {
   use crate::FixedStr;
   use serde::{Serializer, Deserializer, Deserialize};
 
+  /// Serializes `FixedStr<N>` as bytes.
   pub fn serialize<S, const N: usize>(value: &FixedStr<N>, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer, {
     serializer.serialize_bytes(value.as_bytes())
   }
 
+  /// Deserializes `FixedStr<N>` from bytes.
   pub fn deserialize<'de, D, const N: usize>(deserializer: D) -> Result<FixedStr<N>, D::Error> where D: Deserializer<'de>, {
     let bytes: &[u8] = Deserialize::deserialize(deserializer)?;
     FixedStr::<N>::try_from(bytes).map_err(serde::de::Error::custom)
@@ -113,6 +117,7 @@ pub mod serde_as_bytes {
 }
 
 // --- Tests ---
+/// Test module for `serde` integration.
 #[cfg(all(test, feature = "serde"))]
 mod serde_tests {
   use crate::*;

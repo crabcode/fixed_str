@@ -1,5 +1,7 @@
 // fixed_string/src/impls.rs
 
+use core::usize;
+
 use super::*;
 
 impl<const N: usize> fmt::Debug for FixedStr<N> {
@@ -24,12 +26,6 @@ impl<const N: usize> fmt::Debug for FixedStr<N> {
 impl<const N: usize> fmt::Display for FixedStr<N> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", self.as_str())
-  }
-}
-
-impl<const N: usize> EffectiveBytes for FixedStr<N> {
-  fn effective_bytes(&self) -> &[u8] {
-      &self[..self.len()]
   }
 }
 
@@ -64,6 +60,12 @@ impl<const N: usize> core::ops::Deref for FixedStr<N> {
   }
 }
 
+impl<const N: usize> core::ops::DerefMut for FixedStr<N> {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+      &mut self.data
+  }
+}
+
 impl<const N: usize> From<&str> for FixedStr<N> {
   fn from(s: &str) -> Self {
     Self::new(s)
@@ -73,13 +75,11 @@ impl<const N: usize> From<&str> for FixedStr<N> {
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
-  /// The slice must be exactly `N` bytes long, or else an error is returned.
+  /// The string is padded or truncated to fit N.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    if slice.len() != N {
-      return Err(FixedStrError::WrongLength { expected: N, found: slice.len() });
-    }
     let mut buf = [0u8; N];
-    buf.copy_from_slice(slice);
+    let truncated = truncate_utf8_lossy(slice, N);
+    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
     Ok(Self { data: buf })
   }
 }
@@ -115,37 +115,49 @@ impl<const N: usize> PartialOrd for FixedStr<N> {
 
 impl<const N: usize> PartialEq<&str> for FixedStr<N> {
   fn eq(&self, other: &&str) -> bool {
-    self.as_str() == *other
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<FixedStr<N>> for &str {
   fn eq(&self, other: &FixedStr<N>) -> bool {
-    *self == other.as_str()
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<[u8]> for FixedStr<N> {
   fn eq(&self, other: &[u8]) -> bool {
-    self.as_bytes() == other
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<FixedStr<N>> for [u8] {
   fn eq(&self, other: &FixedStr<N>) -> bool {
-    self == other.effective_bytes()
+    self.effective_bytes() == other.effective_bytes()
+  }
+}
+
+impl<const N: usize> PartialEq<&[u8]> for FixedStr<N> {
+  fn eq(&self, other: &&[u8]) -> bool {
+    self.effective_bytes() == other.effective_bytes()
+  }
+}
+
+impl<const N: usize> PartialEq<FixedStr<N>> for &[u8] {
+  fn eq(&self, other: &FixedStr<N>) -> bool {
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<[u8; N]> for FixedStr<N> {
   fn eq(&self, other: &[u8; N]) -> bool {
-    self.as_bytes() == other
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<FixedStr<N>> for [u8; N] {
   fn eq(&self, other: &FixedStr<N>) -> bool {
-    self == other.as_bytes()
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
@@ -153,44 +165,93 @@ impl<const N: usize> PartialEq<FixedStr<N>> for [u8; N] {
 //  Feature Implementations
 //******************************************************************************
 
+/// Implementations for the standard library.
 #[cfg(feature = "std")]
-impl<const N: usize> PartialEq<Vec<u8>> for FixedStr<N> {
-  fn eq(&self, other: &Vec<u8>) -> bool {
-    self.as_bytes() == &**other
+pub mod std_ext {
+  use super::*;
+
+  impl<const N: usize> PartialEq<Vec<u8>> for FixedStr<N> {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+      self.effective_bytes() == other.effective_bytes()
+    }
+  }
+
+  impl<const N: usize> PartialEq<FixedStr<N>> for Vec<u8> {
+    fn eq(&self, other: &FixedStr<N>) -> bool {
+      self.effective_bytes() == other.effective_bytes()
+    }
+  }
+
+  impl<const N: usize> PartialEq<String> for FixedStr<N> {
+    fn eq(&self, other: &String) -> bool {
+      self.effective_bytes() == other.effective_bytes()
+    }
+  }
+
+  impl<const N: usize> PartialEq<FixedStr<N>> for String {
+    fn eq(&self, other: &FixedStr<N>) -> bool {
+      self.effective_bytes() == other.effective_bytes()
+    }
+  }
+
+  impl<const N: usize> From<String> for FixedStr<N> {
+    fn from(s: String) -> Self {
+      Self::new(&s)
+    }
+  }
+
+  impl<const N: usize> From<FixedStr<N>> for String {
+    fn from(fs: FixedStr<N>) -> Self {
+      fs.into_string()
+    }
+  }
+
+  impl<const N: usize> From<&FixedStr<N>> for String {
+    fn from(fs: &FixedStr<N>) -> Self {
+      fs.into_string()
+    }
+  }
+}
+
+//******************************************************************************
+//  EffectiveBytes Implementations
+//******************************************************************************
+
+impl<const N: usize> EffectiveBytes for FixedStr<N> {
+  fn effective_bytes(&self) -> &[u8] {
+      &self[..self.len()]
+  }
+}
+
+impl<const N: usize> EffectiveBytes for &FixedStr<N> {
+  fn effective_bytes(&self) -> &[u8] {
+    (*self).effective_bytes()
+  }
+}
+
+impl EffectiveBytes for [u8] {
+  fn effective_bytes(&self) -> &[u8] {
+    let end = find_first_null(self);
+    &self[..end]
+  }
+}
+
+impl<const N: usize> EffectiveBytes for [u8; N] {
+  fn effective_bytes(&self) -> &[u8] {
+    let end = find_first_null(self);
+    &self[..end]
+  }
+}
+
+impl EffectiveBytes for &str {
+  fn effective_bytes(&self) -> &[u8] {
+    self.as_bytes().effective_bytes()
   }
 }
 
 #[cfg(feature = "std")]
-impl<const N: usize> PartialEq<FixedStr<N>> for Vec<u8> {
-  fn eq(&self, other: &FixedStr<N>) -> bool {
-    &**self == other.as_bytes()
-  }
-}
-
-#[cfg(feature = "std")]
-impl<const N: usize> PartialEq<String> for FixedStr<N> {
-  fn eq(&self, other: &String) -> bool {
-    self.as_str() == other.as_str()
-  }
-}
-
-#[cfg(feature = "std")]
-impl<const N: usize> PartialEq<FixedStr<N>> for String {
-  fn eq(&self, other: &FixedStr<N>) -> bool {
-    self.as_str() == other.as_str()
-  }
-}
-
-#[cfg(feature = "std")]
-impl<const N: usize> From<String> for FixedStr<N> {
-  fn from(s: String) -> Self {
-    Self::new(&s)
-  }
-}
-
-#[cfg(feature = "std")]
-impl<const N: usize> From<FixedStr<N>> for String {
-  fn from(fs: FixedStr<N>) -> Self {
-    fs.into_string()
+impl EffectiveBytes for String {
+  fn effective_bytes(&self) -> &[u8] {
+    self.as_bytes().effective_bytes()
   }
 }

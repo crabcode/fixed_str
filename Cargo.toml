@@ -10,7 +10,7 @@ keywords = ["string", "utf8", "fixed-length", "no_std", "binrw"]
 categories = ["data-structures", "encoding", "no-std"]
 
 [features]
-default = ["std", "serde", "binrw"]
+default = ["std"]
 binrw = ["dep:binrw"]
 serde = ["dep:serde"]
 std = []

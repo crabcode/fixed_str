@@ -11,7 +11,7 @@ pub struct FixedStrBuf<const N: usize> {
 
 impl<const N: usize> FixedStrBuf<N> {
   /// Returns the total capacity of the buffer.
-  pub fn capacity(&self) -> usize { N }
+  pub const fn capacity(&self) -> usize { N }
   /// Returns the number of bytes remaining in the buffer.
   pub fn remaining(&self) -> usize { N - self.len }
   /// Returns the number of bytes currently in the buffer.
@@ -26,7 +26,7 @@ impl<const N: usize> FixedStrBuf<N> {
   ///
   /// Returns an error if the current contents are not valid UTF-8.
   pub fn try_as_str(&self) -> Result<&str, FixedStrError> {
-    core::str::from_utf8(&self.buffer[..self.len]).map_err(|_| FixedStrError::InvalidUtf8)
+    core::str::from_utf8(self.effective_bytes()).map_err(|_| FixedStrError::InvalidUtf8)
   }
 
   /// Attempts to append the entire string to the buffer.
@@ -34,12 +34,13 @@ impl<const N: usize> FixedStrBuf<N> {
   /// If the string’s byte-length is greater than the remaining capacity,
   /// no data is pushed and an error is returned.
   pub fn try_push_str(&mut self, s: &str) -> Result<(), FixedStrError> {
-    let bytes = s.as_bytes();
+    let bytes = s.effective_bytes();
     if bytes.len() > self.remaining() {
       return Err(FixedStrError::Overflow { remaining: self.remaining(), found: bytes.len() });
     }
-    self.buffer[self.len..self.len + bytes.len()].copy_from_slice(bytes);
-    self.len += bytes.len();
+    let safe_bytes = truncate_utf8_lossy(bytes, self.remaining()).as_bytes();
+    self.buffer[self.len..self.len + safe_bytes.len()].copy_from_slice(safe_bytes);
+    self.len += safe_bytes.len();
     Ok(())
   }
 
@@ -59,7 +60,7 @@ impl<const N: usize> FixedStrBuf<N> {
   pub fn push_str_lossy(&mut self, s: &str) -> bool {
     let remaining = self.remaining();
     let valid = if s.len() > remaining {
-      FixedStr::<N>::truncate_utf8_lossy(s.as_bytes(), remaining)
+      truncate_utf8_lossy(s.as_bytes(), remaining)
     } else {
       s
     };
@@ -76,11 +77,11 @@ impl<const N: usize> FixedStrBuf<N> {
   /// Finalizes the builder into a FixedStr.
   ///
   /// This method zeros out any unused bytes in the buffer.
-  pub fn into_fixed(mut self) -> FixedStr<N> {
+  pub fn finalize(mut self) -> Result<FixedStr<N>, FixedStrError> {
     for i in self.len..N {
       self.buffer[i] = 0;
-  }  
-    FixedStr::from_bytes(self.buffer)
+    }  
+    Ok(FixedStr::from_bytes(self.buffer))
   }
 
   /// Clears the builder for reuse, resetting its content to empty.
@@ -89,6 +90,7 @@ impl<const N: usize> FixedStrBuf<N> {
     self.len = 0;
   }
 
+  /// Creates a `String` from the effective bytes.
   #[cfg(feature = "std")]
   pub fn to_string_lossy(&self) -> String {
     String::from_utf8_lossy(self.effective_bytes()).into_owned()
@@ -129,7 +131,7 @@ impl<const N: usize> fmt::Debug for FixedStrBuf<N> {
 
 impl<const N: usize> EffectiveBytes for FixedStrBuf<N> {
   fn effective_bytes(&self) -> &[u8] {
-      &self.buffer[..self.len()]
+      self.buffer.effective_bytes()
   }
 }
 
@@ -152,17 +154,23 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
   }
 }
 
+impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
+  fn from(fixed: FixedStr<N>) -> Self {
+    let mut buf = [0u8; N];
+    let truncated = truncate_utf8_lossy(&fixed, N);
+    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
+    Self { buffer: buf, len: truncated.len() }
+  }
+}
+
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
-  /// The slice must be exactly `N` bytes long, or else an error is returned.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    if slice.len() != N {
-      return Err(FixedStrError::WrongLength { expected: N, found: slice.len() });
-    }
     let mut buf = [0u8; N];
-    buf.copy_from_slice(slice);
-    Ok(Self { buffer: buf, len: N })
+    let truncated = truncate_utf8_lossy(slice, N);
+    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
+    Ok(Self { buffer: buf, len: truncated.len() })
   }
 }
 
@@ -197,25 +205,37 @@ impl<const N: usize> PartialOrd for FixedStrBuf<N> {
 
 impl<const N: usize> PartialEq<[u8]> for FixedStrBuf<N> {
   fn eq(&self, other: &[u8]) -> bool {
-    &self.buffer == other
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<FixedStrBuf<N>> for [u8] {
   fn eq(&self, other: &FixedStrBuf<N>) -> bool {
-    self == other.effective_bytes()
+    self.effective_bytes() == other.effective_bytes()
+  }
+}
+
+impl<const N: usize> PartialEq<&[u8]> for FixedStrBuf<N> {
+  fn eq(&self, other: &&[u8]) -> bool {
+    self.effective_bytes() == other.effective_bytes()
+  }
+}
+
+impl<const N: usize> PartialEq<FixedStrBuf<N>> for &[u8] {
+  fn eq(&self, other: &FixedStrBuf<N>) -> bool {
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<[u8; N]> for FixedStrBuf<N> {
   fn eq(&self, other: &[u8; N]) -> bool {
-    &self.buffer == other
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 impl<const N: usize> PartialEq<FixedStrBuf<N>> for [u8; N] {
   fn eq(&self, other: &FixedStrBuf<N>) -> bool {
-    self == &other.buffer
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
@@ -234,14 +254,14 @@ impl<const N: usize> PartialEq<FixedStrBuf<N>> for FixedStr<N> {
 #[cfg(feature = "std")]
 impl<const N: usize> PartialEq<Vec<u8>> for FixedStrBuf<N> {
   fn eq(&self, other: &Vec<u8>) -> bool {
-    &self.buffer == &**other
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
 #[cfg(feature = "std")]
 impl<const N: usize> PartialEq<FixedStrBuf<N>> for Vec<u8> {
   fn eq(&self, other: &FixedStrBuf<N>) -> bool {
-    &**self == &other.buffer
+    self.effective_bytes() == other.effective_bytes()
   }
 }
 
@@ -249,6 +269,7 @@ impl<const N: usize> PartialEq<FixedStrBuf<N>> for Vec<u8> {
 //  Tests
 //******************************************************************************
 
+/// Test module for `FixedStrBuf`.
 #[cfg(test)]
 pub mod tests {
   use super::*;
@@ -285,21 +306,19 @@ pub mod tests {
       // Any additional push will result in truncation.
       let result = buf.push_str_lossy(", world!");
       assert!(!result);
-      let fixed: FixedStr<5> = buf.into_fixed();
+      let fixed: FixedStr<5> = buf.finalize().unwrap();
       assert_eq!(fixed.as_str(), "Hello");
   }
 
   #[test]
-  fn test_into_fixed_trailing_zeros() {
+  fn test_finalize_trailing_zeros() {
       let mut buf = FixedStrBuf::<10>::new();
       buf.try_push_str("Hi").unwrap();
-      let fixed: FixedStr<10> = buf.into_fixed();
+      let fixed: FixedStr<10> = buf.finalize().unwrap();
       // The effective string is "Hi" and the rest are zeros.
       assert_eq!(fixed.len(), 2);
       assert_eq!(fixed.as_str(), "Hi");
-      for &b in &fixed.as_bytes()[2..] {
-      assert_eq!(b, 0);
-      }
+      assert_eq!(fixed.as_bytes()[2], 0);
   }
 
   #[test]
@@ -316,5 +335,15 @@ pub mod tests {
     buf.try_push_str("Rust").unwrap();
     assert_eq!(buf.len(), 4);
     assert_eq!(&buf[..4], b"Rust");
+  }
+  
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_fixed_str_buf_into_iter() {
+    let mut buf = FixedStrBuf::<5>::new();
+    buf.try_push_str("Hey").unwrap();
+    let bytes: Vec<u8> = buf.into_iter().collect();
+    assert_eq!(bytes[..3], *b"Hey");
+    assert_eq!(bytes[3..], [0u8; 2]);
   }
 }
