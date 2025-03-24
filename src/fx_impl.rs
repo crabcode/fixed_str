@@ -74,22 +74,16 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
   /// - `InvalidUtf8`: Thrown if the resulting string isn't valid UTF-8.
   /// 
   /// Returns `FixedStr` if successful.
+  /// 
+  /// # Panics
+  /// Panics if N == 0.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    panic_on_zero(N);
-    let bytes = slice.effective_bytes();
-    let len = bytes.len();
-    if len > N {
-      return Err(FixedStrError::Overflow { available: N, found: len });
-    }
-    let mut buf = [0u8; N];
-    buf[..len].copy_from_slice(bytes);
+    let buf = copy_into_buffer(&slice.effective_bytes(), BufferCopyMode::Exact).unwrap();
     let result = Self { data: buf };
-    
-    if result.is_valid() {
-      return Ok(result);
+    match result.is_valid() {
+      true => Ok(result),
+      false => Err(FixedStrError::InvalidUtf8),
     }
-
-    Err(FixedStrError::InvalidUtf8)
   }
 }
 

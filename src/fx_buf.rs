@@ -20,7 +20,6 @@ impl<const N: usize> FixedStrBuf<N> {
   /// Creates a new, empty FixedStrBuf.
   /// 
   /// # Panics
-  /// 
   /// Panics if N == 0.
   pub const fn new() -> Self {
     panic_on_zero(N);
@@ -161,32 +160,24 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
 /// Creates a `FixedStrBuf` from `FixedStr`
 /// 
 /// # Panics
-/// 
 /// Panics if N == 0.
 impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
   fn from(fixed: FixedStr<N>) -> Self {
-    panic_on_zero(N);
-    let mut buf = [0u8; N];
-    let truncated = truncate_utf8_lossy(&fixed, N);
-    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
-    Self { buffer: buf, len: truncated.len() }
+    let buf = copy_into_buffer(&fixed, BufferCopyMode::Truncate).unwrap();
+    Self { buffer: buf, len: buf.len() }
   }
 }
 
 /// Tries to create a `FixedStrBuf`from `&[u8]`
 /// 
 /// # Panics
-/// 
 /// Panics if N == 0.
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    panic_on_zero(N);
-    let mut buf = [0u8; N];
-    let truncated = truncate_utf8_lossy(slice, N);
-    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
-    Ok(Self { buffer: buf, len: truncated.len() })
+    let buf = copy_into_buffer(&slice, BufferCopyMode::Exact).unwrap();
+    Ok(Self { buffer: buf, len: buf.len() })
   }
 }
 

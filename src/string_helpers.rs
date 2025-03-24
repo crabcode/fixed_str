@@ -3,6 +3,17 @@
 #[cfg(feature = "memchr")]
 use memchr::memchr;
 
+/// An enum to select copy mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferCopyMode {
+    /// Requires that the source fits entirely into the buffer.
+    Exact,
+    /// Copies up to the capacity, discarding any extra bytes.
+    Slice,
+    /// Copies up to the capacity, truncating safely.
+    Truncate,
+}
+
 /// Enforces `FixedStr` capacity to be greater than zero.
 ///
 /// # Panics
@@ -68,7 +79,7 @@ pub fn truncate_utf8_lossy(bytes: &[u8], max_len: usize) -> &str {
   unsafe { core::str::from_utf8_unchecked(&bytes[..valid_len]) }
 }
 
-/// (Existing const function for const contexts.)
+/// Finds the valid string boundaries with in const context.
 pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
   let mut i = 0;
   let mut last_valid = 0;
@@ -110,4 +121,56 @@ pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
     i += width;
   }
   last_valid
+}
+
+/// Copies bytes from a source slice into a fixed-size buffer of length N.
+/// Depending on `mode`, it will either error (Exact) or truncate (Truncate) if the source is too long.
+/// 
+/// # Panics
+/// Panics if N == 0.
+pub fn copy_into_buffer<const N: usize>(src: &[u8], mode: BufferCopyMode) -> Result<[u8; N], crate::FixedStrError> {
+  panic_on_zero(N);
+  let len = match mode {
+      BufferCopyMode::Exact => {
+          if src.len() > N {
+              return Err(crate::FixedStrError::Overflow { available: N, found: src.len() });
+          }
+          src.len()
+      }
+      BufferCopyMode::Slice => src.len().min(N),
+      BufferCopyMode::Truncate => find_valid_utf8_len(src, N),
+  };
+  let mut buf = [0u8; N];
+  buf[..len].copy_from_slice(&src[..len]);
+  Ok(buf)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_exact_success() {
+      let src = b"Hello";
+      // Since "Hello" is 5 bytes and the capacity is 10, this succeeds.
+      let buf: [u8; 10] = copy_into_buffer::<10>(src, BufferCopyMode::Exact).unwrap();
+      // The first 5 bytes match; the rest should be zero.
+      assert_eq!(&buf[..5], src);
+      assert_eq!(&buf[5..], &[0; 5]);
+  }
+
+  #[test]
+  fn test_exact_overflow() {
+      let src = b"Hello, world!";
+      let res = copy_into_buffer::<5>(src, BufferCopyMode::Exact);
+      assert!(res.is_err());
+  }
+
+  #[test]
+  fn test_truncate() {
+      let src = b"Hello, world!";
+      // In Truncate mode, only the first 5 bytes will be copied.
+      let buf: [u8; 5] = copy_into_buffer::<5>(src, BufferCopyMode::Truncate).unwrap();
+      assert_eq!(&buf, b"Hello");
+  }
 }

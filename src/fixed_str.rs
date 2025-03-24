@@ -1,5 +1,7 @@
 // fixed_string/src/fixed_str.rs
 
+use crate::string_helpers::copy_into_buffer;
+
 use super::*;
 
 /// A fixed–length string with a constant size of `N` bytes.
@@ -67,14 +69,9 @@ impl<const N: usize> FixedStr<N> {
   /// ```
   /// 
   /// # Panics
-  /// 
   /// Panics if N == 0.
   pub fn new(input: &str) -> Self {
-    panic_on_zero(N);
-    let bytes = input.as_bytes();
-    let mut buf = [0u8; N];
-    let valid_len = find_valid_utf8_len(bytes, N);
-    buf[..valid_len].copy_from_slice(&bytes[..valid_len]);
+    let buf = copy_into_buffer(input.as_bytes(), BufferCopyMode::Truncate).unwrap();
     Self { data: buf }
   }
 
@@ -96,7 +93,6 @@ impl<const N: usize> FixedStr<N> {
   /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
   /// 
   /// # Panics
-  /// 
   /// Panics if N == 0.
   pub const fn new_const(input: &str) -> Self {
     panic_on_zero(N);
@@ -118,34 +114,11 @@ impl<const N: usize> FixedStr<N> {
   /// If the slice is longer than `N`, only the first `N` bytes are used.
   /// 
   /// If the slice doesn't end on a valid UTF-8 character, the string is truncated.
+  /// 
+  /// # Panics
+  /// Panics if N == 0.
   pub fn from_slice(input: &[u8]) -> Self {
-    panic_on_zero(N);
-    let mut buf = [0u8; N];
-    let truncated = truncate_utf8_lossy(input, N);
-    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
-    Self { data: buf }
-  }
-  
-  /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
-  /// 
-  /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
-  pub fn from_slice_unsafe(slice: &[u8]) -> Self {
-    panic_on_zero(N);
-    let mut buf = [0u8; N];
-    let len = slice.len().min(N);
-    buf[..len].copy_from_slice(&slice[..len]);
-    Self { data: buf }
-  }
-
-  /// Constructs a `FixedStr` from an array of bytes.
-  /// 
-  /// Truncates the string if invalid UTF-8 data is found.
-  pub fn from_bytes(bytes: [u8; N]) -> Self {
-    panic_on_zero(N);
-    let mut buf = [0u8; N];
-    let truncated = truncate_utf8_lossy(&bytes, N);
-    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
-    Self { data: buf }
+    Self { data: copy_into_buffer(input, BufferCopyMode::Truncate).unwrap() }
   }
   
   /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
@@ -153,14 +126,29 @@ impl<const N: usize> FixedStr<N> {
   /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
   /// 
   /// # Panics
+  /// Panics if N == 0.
+  pub fn from_slice_unsafe(slice: &[u8]) -> Self {
+    Self { data: copy_into_buffer(slice, BufferCopyMode::Slice).unwrap() }
+  }
+
+  /// Constructs a `FixedStr` from an array of bytes.
   /// 
+  /// Truncates the string if invalid UTF-8 data is found.
+  /// 
+  /// # Panics
+  /// Panics if N == 0.
+  pub fn from_bytes(bytes: [u8; N]) -> Self {
+    Self { data: copy_into_buffer(&bytes, BufferCopyMode::Truncate).unwrap() }
+  }
+  
+  /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
+  /// 
+  /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+  /// 
+  /// # Panics
   /// Panics if N == 0.
   pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
-    panic_on_zero(N);
-    let mut buf = [0u8; N];
-    let len = bytes.len().min(N);
-    buf[..len].copy_from_slice(&bytes[..len]);
-    Self { data: buf }
+    Self { data: copy_into_buffer(&bytes, BufferCopyMode::Slice).unwrap() }
   }
 
 
@@ -175,15 +163,11 @@ impl<const N: usize> FixedStr<N> {
   /// the remaining bytes are set to zero.
   /// 
   /// **Warning:** if `input` contains `\0`, the rest will be truncated.
+  /// 
+  /// # Panics
+  /// Panics if N == 0.
   pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
-    let bytes = input.effective_bytes();
-    let len = bytes.len();
-    if len > N {
-      return Err(FixedStrError::Overflow { available: N, found: len });
-    }
-    let mut buf = [0u8; N];
-    buf[..len].copy_from_slice(&bytes);
-    self.data = buf;
+    self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Exact).unwrap();
     Ok(())
   }
 
@@ -199,11 +183,11 @@ impl<const N: usize> FixedStr<N> {
   /// fs.set_lossy("World!");
   /// // "World!" is truncated to "World" because the capacity is 5 bytes.
   /// assert_eq!(fs.as_str(), "World");
+  /// 
+  /// # Panics
+  /// Panics if N == 0.
   pub fn set_lossy(&mut self, input: &str) {
-    let valid = truncate_utf8_lossy(input.as_bytes(), N);
-    let mut buf = [0u8; N];
-    buf[..valid.len()].copy_from_slice(&valid.as_bytes());
-    self.data = buf;
+    self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
   }
 
   /// Clears the `FixedStr`, setting all bytes to zero.

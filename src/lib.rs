@@ -39,9 +39,11 @@ pub use fx_buf::FixedStrBuf;
 pub use fx_error::FixedStrError;
 pub use effective_bytes::{EffectiveBytes, EffectiveBytesIter};
 pub use string_helpers::{
+  BufferCopyMode,
   panic_on_zero,
   find_first_null,
   find_valid_utf8_len,
   find_valid_boundary,
-  truncate_utf8_lossy
+  truncate_utf8_lossy,
+  copy_into_buffer,
 };
