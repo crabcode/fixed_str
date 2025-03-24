@@ -80,6 +80,8 @@ impl<const N: usize> FixedStr<N> {
   /// Unlike [`FixedStr::new`], this method does **not** check whether the input fits
   /// fully or whether any characters were truncated.
   ///
+  /// If the string contains `\0`, the rest will be truncated.
+  /// 
   /// If the string contains multibyte characters near the edge of the buffer,
   /// they will be omitted silently. If no valid boundary is found, the result may be empty.
   ///
@@ -168,6 +170,8 @@ impl<const N: usize> FixedStr<N> {
   /// The input string is copied into the internal buffer. If the input exceeds
   /// the capacity, an error is thrown. If the input is shorter than the capacity,
   /// the remaining bytes are set to zero.
+  /// 
+  /// **Warning:** if `input` contains `\0`, the rest will be truncated.
   pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
     let bytes = input.effective_bytes();
     let len = bytes.len();
@@ -181,6 +185,8 @@ impl<const N: usize> FixedStr<N> {
   }
 
   /// Truncates overflowing bytes down to the last valid UTF-8 string.
+  /// 
+  /// **Warning:** if `input` contains `\0`, the rest will be truncated.
   /// 
   /// # Examples
   /// 

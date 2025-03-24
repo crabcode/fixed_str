@@ -1,126 +1,140 @@
+
 # fixed_string
 
-`fixed_string` is a Rust crate that provides a fixed–length, null–padded UTF‑8 string type. The type, `FixedStr<N>`, stores exactly N bytes and is designed to handle both safe UTF‑8 truncation and constant contexts (via a separate constructor).
+`fixed_string` is a Rust crate that provides fixed–length, null–padded UTF‑8 string types. These types are useful when you want precise, predictable layout (e.g. in serialization, interop, or embedded contexts) without losing safe UTF-8 handling.
 
-## Features
+The main type, `FixedStr<N>`, stores exactly N bytes internally. It zero-pads any unused space and treats the first `\0` byte as the end of the visible string for all human-readable operations (e.g. `Display`, `as_str`, etc).
 
-- **Fixed Capacity:** Each `FixedStr` instance uses a `[u8; N]` buffer. If the input string is shorter than N, the remaining bytes are zeros
-- **Safe UTF‑8 Truncation:** The `new` method ensures that if the input is too long, it gets truncated at the last valid UTF‑8 boundary so that you never end up with invalid UTF‑8
-- **Const Constructor:** Use `new_const` for compile–time string creation (be mindful that this version does not check for UTF‑8 boundaries)
-- **Incremental Building:** `FixedStrBuf` allows you to construct your fixed-length strings piece-by-piece without allocations
-- **Modifiable:** Methods like `clear` and `set` let you update your fixed string in place
-- **Standard Trait Implementations:** Implements common traits like `Clone`, `Copy`, `Debug`, `Display`, `Hash`, `PartialOrd`, and `Ord`. It also supports convenient conversions from and to &str and String
-- **no_std Compatible:** Works in environments without the standard library
-- **Optional Binary Serialization:** With the `binrw` feature enabled, you can easily serialize and deserialize your fixed strings
+---
 
-## Installation
+## 📦 Features
 
-Install using Cargo:
+- **Fixed Capacity:** Each `FixedStr<N>` instance uses a `[u8; N]` backing array. If the input is shorter than N, the unused bytes are zero-padded.
+- **Null-Terminated Semantics:** The string is terminated at the first `\0` byte. Data after that is preserved in memory but excluded from most string views.
+- **Safe UTF‑8 Truncation:** Input strings are never split mid–character. If too long, they are truncated to the last valid boundary.
+- **Const Construction:** `new_const` allows fixed strings to be defined in `const` contexts (skipping UTF‑8 validation).
+- **Incremental Builder:** `FixedStrBuf<N>` allows you to build fixed strings piece-by-piece with boundary checks and lossy support.
+- **Modifiable In-Place:** Methods like `clear`, `set`, and `truncate` update the content without allocations.
+- **Binary & Text Format Support:**
+  - **Serde:** Serialize as human-readable strings or raw bytes.
+  - **Binrw:** Deserialize directly from fixed-size byte arrays.
+- **Standard Trait Support:** Implements `Clone`, `Copy`, `Debug`, `Display`, `Hash`, `PartialEq`, `Ord`, and `From<&str>`, etc.
+- **No-Std Friendly:** Designed to work in embedded environments and bare-metal systems.
 
-```
-cargo add fixed_string
-```
+---
 
-Or add this to your `Cargo.toml`:
+## 🚀 Usage
 
-```
-[dependencies]
-fixed_string = "0.2"
-
-[dependencies.fixed_string]
-version = "0.2"
-features = ["binrw"]       # enable binrw support
-default-features = false   # disable std
-```
-
-## Usage
-
-Here’s a quick example to show how you can create and use a `FixedStr`:
-
-```
+```rust
 use fixed_string::FixedStr;
 
 fn main() {
-  // Create a FixedStr with a capacity of 8 bytes
-  let mut fs = FixedStr::<10>::new("Hello, world!");
-  // Since the input exceeds 10 bytes, it will be safely truncated
-  println!("FixedStr: {}", fs); // Might print "Hello, wor"
-  
-  // Update the string content
-  fs.set("Rust");
-  println!("Updated FixedStr: {}", fs);
-  
-  // Convert to an owned String (requires the std feature)
-  let owned: String = fs.into_string(); println!("Owned String: {}", owned);
+    // Create a FixedStr with exactly 10 bytes of space
+    let mut s = FixedStr::<10>::new("Hello, world!");
+    println!("{}", s); // → "Hello, wor" (UTF-8 safe truncation)
+
+    // Update the content
+    s.set("Rust\0Extra"); 
+    println!("{}", s); // → "Rust" (everything after `\0` is ignored)
+
+    // Convert to owned String (requires std)
+    let owned: String = s.into_string();
+    println!("Owned: {}", owned);
 }
 ```
 
-### Incremental Building with FixedStrBuf
+---
 
-For scenarios where you need to build the string incrementally (e.g., parsing data or assembling pieces in an embedded environment), you can use the `FixedStrBuf` builder:
+## 🧱 `FixedStrBuf` Builder
 
-```
+```rust
 use fixed_string::{FixedStrBuf, FixedStr};
 
 fn main() {
-    // Create a builder for a fixed string with a capacity of 12 bytes
     let mut builder = FixedStrBuf::<12>::new();
-    
-    // Append a string slice. If it doesn't fully fit, try_push_str returns an error
-    builder.try_push_str("Hello").expect("Push should succeed");
-    
-    // Append a character. This will succeed if the UTF‑8 encoded char fits
-    builder.try_push_char(' ').expect("Push should succeed");
-    
-    // Use a lossy push to append as many complete characters as possible
-    // Returns false if not all input could be appended
-    let full_pushed = builder.push_str_lossy("world! Welcome!");
-    println!("All pushed? {}", full_pushed);
-    
-    // Finalize the builder into a FixedStr
+    builder.try_push_str("Hello").unwrap();
+    builder.try_push_char(' ').unwrap();
+    builder.push_str_lossy("world! 👋");
     let fixed: FixedStr<12> = builder.into_fixed();
-    println!("Final FixedStr: {}", fixed);
+    println!("{}", fixed); // likely: "Hello world!"
 }
 ```
 
-The FixedStrBuf API provides:
-- try_push_str and try_push_char: Methods that ensure no partial data is added
-- push_str_lossy: Appends as many complete UTF‑8 characters as possible, useful when you prefer to salvage what fits
-- clear: Resets the builder for reuse
-- into_fixed: Finalizes and converts the builder into a FixedStr, zeroing out any unused portion
+### Builder Highlights
+- `try_push_str` / `try_push_char`: Append only if fully valid
+- `push_str_lossy`: Append as much as fits, stopping at valid UTF-8 boundaries
+- `into_fixed`: Finalizes into `FixedStr<N>`
+- `clear`: Reuse without reallocating
 
-## API Overview
+---
 
-**Constructors**
-  - `FixedStr::new(input: &str) -> Self`: Creates a new fixed–size string, safely truncating if the input is too long
-  - `FixedStr::new_const(input: &str) -> Self`: A constant constructor (does **not** check for valid UTF‑8 boundaries!)
+## 🛠 API Overview
 
-**Builder**
-- `FixedStrBuf::new() -> Self`: Creates an empty builder
-- `FixedStrBuf::try_push_str(&mut self, s: &str) -> Result<(), FixedStrError>`: Appends a string slice if it fully fits
-- `FixedStrBuf::try_push_char(&mut self, c: char) -> Result<(), FixedStrError>`: Appends a single character
-- `FixedStrBuf::push_str_lossy(&mut self, s: &str) -> bool`: Appends as many complete characters as possible
-- `FixedStrBuf::clear(&mut self)`: Resets the builder
-- `FixedStrBuf::finalize(self) -> FixedStr<N>`: Finalizes the builder, zero–padding any remaining capacity
+### Constructors
+- `FixedStr::new(&str) -> Self`: Safely constructs with padding and truncation
+- `FixedStr::new_const(&str) -> Self`: `const` fn version
 
-**Modifiers**
-  - `set(&mut self, input: &str)`: Replace the content of the fixed string with a new value
-  - `clear(&mut self)`: Reset the string to an empty state (all bytes zero)
-        
-**Accessors**
-  - `len() -> usize`: Returns the number of valid bytes (up to the first zero)
-  - `capacity() -> usize`: Returns the total capacity
-  - `as_str() -> &str`: Returns a string slice
-  - `try_as_str() -> Result<&str, FixedStrError>`: Attempts to convert the stored bytes to a &str, returning an error if invalid
-  - `as_bytes() -> &[u8]`: Access the underlying bytes
+### Modifiers
+- `set(&mut self, &str)`: Replace content (truncates on `\0`)
+- `clear()`: Zero the internal buffer
+- `truncate(len: usize)`: Truncate to visible length
 
-**Conversions (std only)**
-  - `into_string() -> String`: Converts the FixedStr into an owned String
-  - `to_string_lossy() -> String`: Converts to a String, replacing invalid UTF‑8 sequences with the Unicode replacement character
+### Views
+- `as_str() -> &str`: Returns string up to first `\0`
+- `try_as_str() -> Result<&str, FixedStrError>`: UTF-8 checked
+- `as_bytes() -> &[u8]`: Full raw byte view
+- `effective_bytes() -> &[u8]`: View up to first `\0`
+- `len() / capacity()`: Logical vs physical size
 
-**Extras**
-  - `as_hex()` and `as_hex_dump()`: For visualizing the byte content in hexadecimal form
+### Conversion (requires `std`)
+- `into_string() -> String`
+- `to_string_lossy() -> String`
 
-## License
+### Extras
+- `as_hex()` and `as_hex_dump()`: Debug-friendly byte views
 
-This project is dual-licensed under either the MIT license or the Apache 2.0 license.
+---
+
+## Feature Flags
+
+- `std` – Enables conversions and formatting features requiring std
+- `binrw` – Adds binary serialization via [`binrw`](https://docs.rs/binrw)
+- `serde` – Enables human-readable and byte-level (via `serde_as_bytes`) serialization
+- `const_mut_refs` – Opt-in workaround for some `const` fn limitations
+
+---
+
+## Important Design Notes
+
+- `\0` is **treated as a terminator**. Content after it is ignored in most APIs.
+- `N` must be greater than 0. Supplying zero will panic at runtime.
+- `new_const()` does **not** validate UTF-8 boundaries. Use with care.
+- Slices are always padded or truncated to exactly `N` bytes.
+
+---
+
+## Example: Serde as Bytes
+
+```rust
+#[derive(Serialize, Deserialize)]
+struct Header {
+    #[serde(with = "fixed_string::features::serde_as_bytes")]
+    name: FixedStr<16>,
+}
+```
+
+---
+
+## 📜 License
+
+Licensed under either:
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+
+---
+
+## 🔗 Links
+
+- [Crate on crates.io](https://crates.io/crates/fixed_string)
+- [Docs.rs](https://docs.rs/fixed_string)
+- [GitHub Repository](https://github.com/crabcode/fixed_string)

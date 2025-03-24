@@ -2,7 +2,7 @@
 
 use crate::EffectiveBytes;
 
-/// Enforces `FixedStr` capacities of greater than zero.
+/// Enforces `FixedStr` capacity to be greater than zero.
 ///
 /// # Parameters
 /// 
@@ -10,7 +10,7 @@ use crate::EffectiveBytes;
 /// 
 /// # Panics
 /// 
-/// Panics if N == 0
+/// Panics if N == 0.
 pub const fn panic_on_zero(n: usize) {
   assert!(n > 0, "FixedStr capacity N must be greater than zero");
 }

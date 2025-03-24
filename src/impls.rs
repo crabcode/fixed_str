@@ -94,6 +94,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
 }
 
 impl<const N: usize> From<&str> for FixedStr<N> {
+  /// **Warning:** If the input string contains `\0` or invaliid UTF-8 code, the rest will be truncated.
   fn from(s: &str) -> Self {
     Self::new(s)
   }
