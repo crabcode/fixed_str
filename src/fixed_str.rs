@@ -69,9 +69,10 @@ impl<const N: usize> FixedStr<N> {
   /// Panics if N == 0.
   pub fn new(input: &str) -> Self {
     panic_on_zero(N);
+    let bytes = input.as_bytes();
     let mut buf = [0u8; N];
-    let valid_len = compute_valid_len(input, N);
-    buf[..valid_len].copy_from_slice(&input.as_bytes()[..valid_len]);
+    let valid_len = find_valid_utf8_len(bytes, N);
+    buf[..valid_len].copy_from_slice(&bytes[..valid_len]);
     Self { data: buf }
   }
 
