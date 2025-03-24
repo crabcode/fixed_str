@@ -97,15 +97,6 @@ impl<const N: usize> FixedStr<N> {
     
     Self { data: buf }
   }
-
-  /// Constructs a `FixedStr` from an array of bytes.
-  pub fn from_bytes(bytes: [u8; N]) -> Self {
-    let mut buf = [0u8; N];
-    let truncated = truncate_utf8_lossy(&bytes, N);
-    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
-    Self { data: buf }
-  }
-
   /// Creates a `FixedStr` from a slice.
   ///
   /// If the slice length is less than `N`, only the first `slice.len()` bytes are copied (and the rest remain zero).
@@ -128,6 +119,27 @@ impl<const N: usize> FixedStr<N> {
     buf[..len].copy_from_slice(&slice[..len]);
     Self { data: buf }
   }
+
+  /// Constructs a `FixedStr` from an array of bytes.
+  /// 
+  /// Truncates the string if invalid UTF-8 data is found.
+  pub fn from_bytes(bytes: [u8; N]) -> Self {
+    let mut buf = [0u8; N];
+    let truncated = truncate_utf8_lossy(&bytes, N);
+    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
+    Self { data: buf }
+  }
+  
+  /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
+  /// 
+  /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+  pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
+    let mut buf = [0u8; N];
+    let len = bytes.len().min(N);
+    buf[..len].copy_from_slice(&bytes[..len]);
+    Self { data: buf }
+  }
+
 
   //****************************************************************************
   //  Modifiers
@@ -195,7 +207,7 @@ impl<const N: usize> FixedStr<N> {
   }
 
   /// Returns the raw bytes stored in the `FixedStr` as `mut`
-  pub const fn as_mut_bytes(&mut self) -> &mut [u8] {
+  pub fn as_mut_bytes(&mut self) -> &mut [u8] {
     &mut self.data
   }
 
