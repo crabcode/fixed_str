@@ -25,6 +25,8 @@ pub mod fixed_str;
 pub mod impls;
 /// A builder in `FixedStrBuf`.
 pub mod buffer;
+/// A trait to expose the string's non-zero bytes.
+pub mod effective;
 /// Custom error type for `FixedStr` conversions.
 pub mod error;
 /// Feature implementations, like `binrw` or `serde`.
@@ -34,5 +36,6 @@ pub mod util;
 
 pub use fixed_str::*;
 pub use buffer::FixedStrBuf;
+pub use effective::*;
 pub use error::FixedStrError;
 pub use util::*;

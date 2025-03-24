@@ -1,7 +1,6 @@
 // fixed_string/src/impls.rs
 
 use core::usize;
-
 use super::*;
 
 impl<const N: usize> fmt::Debug for FixedStr<N> {
@@ -93,10 +92,10 @@ impl<const N: usize> Hash for FixedStr<N> {
 
 impl<const N: usize> IntoIterator for FixedStr<N> {
   type Item = u8;
-  type IntoIter = core::array::IntoIter<u8, N>;
+  type IntoIter = EffectiveBytesIter<N>;
 
   fn into_iter(self) -> Self::IntoIter {
-    core::array::IntoIter::into_iter(self.data.into_iter())
+    EffectiveBytesIter { data: self.data, index: 0, len: self.len() }
   }
 }
 
@@ -162,10 +161,10 @@ impl<const N: usize> PartialEq<FixedStr<N>> for [u8; N] {
 }
 
 //******************************************************************************
-//  Feature Implementations
+//  std Implementations
 //******************************************************************************
 
-/// Implementations for the standard library.
+/// Implementations for the Standard Library.
 #[cfg(feature = "std")]
 pub mod std_ext {
   use super::*;
@@ -210,48 +209,5 @@ pub mod std_ext {
     fn from(fs: &FixedStr<N>) -> Self {
       fs.into_string()
     }
-  }
-}
-
-//******************************************************************************
-//  EffectiveBytes Implementations
-//******************************************************************************
-
-impl<const N: usize> EffectiveBytes for FixedStr<N> {
-  fn effective_bytes(&self) -> &[u8] {
-      &self[..self.len()]
-  }
-}
-
-impl<const N: usize> EffectiveBytes for &FixedStr<N> {
-  fn effective_bytes(&self) -> &[u8] {
-    (*self).effective_bytes()
-  }
-}
-
-impl EffectiveBytes for [u8] {
-  fn effective_bytes(&self) -> &[u8] {
-    let end = find_first_null(self);
-    &self[..end]
-  }
-}
-
-impl<const N: usize> EffectiveBytes for [u8; N] {
-  fn effective_bytes(&self) -> &[u8] {
-    let end = find_first_null(self);
-    &self[..end]
-  }
-}
-
-impl EffectiveBytes for &str {
-  fn effective_bytes(&self) -> &[u8] {
-    self.as_bytes().effective_bytes()
-  }
-}
-
-#[cfg(feature = "std")]
-impl EffectiveBytes for String {
-  fn effective_bytes(&self) -> &[u8] {
-    self.as_bytes().effective_bytes()
   }
 }

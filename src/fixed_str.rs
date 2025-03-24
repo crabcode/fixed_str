@@ -19,12 +19,6 @@ pub struct FixedStr<const N: usize> {
   pub(super) data: [u8; N],
 }
 
-/// A trait that extracts the effective bytes from the type, i.e. up until the first `\0`.
-pub trait EffectiveBytes {
-  /// Returns the effective bytes up until the first `\0`.
-  fn effective_bytes(&self) -> &[u8];
-}
-
 /// A fixed–length string with a constant size of `N` bytes.
 ///
 /// Internally, the string is stored in a `[u8; N]` array.
@@ -192,8 +186,14 @@ impl<const N: usize> FixedStr<N> {
     &mut self.data
   }
 
+  /// Returns an iterator that goes through the full byte
+  /// array instead of terminating at the first `\0`.
+  pub fn byte_iter(&self) -> impl Iterator<Item = u8> + '_ {
+    self.data.iter().copied()
+  }
+
   //****************************************************************************
-  //  Feature Functions
+  //  std Functions
   //****************************************************************************
 
   /// Formats a byte array into custom chunks
@@ -223,11 +223,6 @@ impl<const N: usize> FixedStr<N> {
   }
 
   /// Converts the `FixedStr` to an owned String.
-  ///
-  /// # Panics
-  /// 
-  /// This panics if the effective string (up to the first zero)
-  /// is not valid UTF‑8.
   #[cfg(feature = "std")]
   pub fn into_string(self) -> String {
     self.as_str().to_string()

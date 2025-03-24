@@ -38,9 +38,8 @@ impl<const N: usize> FixedStrBuf<N> {
     if bytes.len() > self.remaining() {
       return Err(FixedStrError::Overflow { remaining: self.remaining(), found: bytes.len() });
     }
-    let safe_bytes = truncate_utf8_lossy(bytes, self.remaining()).as_bytes();
-    self.buffer[self.len..self.len + safe_bytes.len()].copy_from_slice(safe_bytes);
-    self.len += safe_bytes.len();
+    self.buffer[self.len..self.len + bytes.len()].copy_from_slice(bytes);
+    self.len += bytes.len();
     Ok(())
   }
 
