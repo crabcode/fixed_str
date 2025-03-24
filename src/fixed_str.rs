@@ -70,7 +70,20 @@ impl<const N: usize> FixedStr<N> {
     Self { data: buf }
   }
 
-  /// Creates a new `FixedStr` in a const context.
+  /// Creates a new `FixedStr` at compile time, truncating at the last valid UTF-8 boundary.
+  ///
+  /// Unlike [`FixedStr::new`], this method does **not** check whether the input fits
+  /// fully or whether any characters were truncated.
+  ///
+  /// If the string contains multibyte characters near the edge of the buffer,
+  /// they will be omitted silently. If no valid boundary is found, the result may be empty.
+  ///
+  /// # Warning
+  ///
+  /// This method **does not report truncation**. It is intended for use
+  /// in compile-time settings where partial data is acceptable.
+  ///
+  /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
   pub const fn new_const(input: &str) -> Self {
     let bytes = input.as_bytes();
     let mut buf = [0u8; N];

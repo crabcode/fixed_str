@@ -65,21 +65,36 @@ impl<const N: usize> core::ops::DerefMut for FixedStr<N> {
   }
 }
 
-impl<const N: usize> From<&str> for FixedStr<N> {
-  fn from(s: &str) -> Self {
-    Self::new(s)
-  }
-}
-
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
-  /// The string is padded or truncated to fit N.
+  /// 
+  /// # Error
+  /// - `WrongLength`: Thrown if the slice's effective bytes are longer than N.
+  /// - `InvalidUtf8`: Thrown if the resulting string isn't valid UTF-8.
+  /// 
+  /// Returns `FixedStr` if successful.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+    let bytes = slice.effective_bytes();
+    let len = bytes.len();
+    if len > N {
+      return Err(FixedStrError::WrongLength { expected: N, found: len });
+    }
     let mut buf = [0u8; N];
-    let truncated = truncate_utf8_lossy(slice, N);
-    buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
-    Ok(Self { data: buf })
+    buf[..len].copy_from_slice(bytes);
+    let result = Self { data: buf };
+    
+    if result.is_valid() {
+      return Ok(result);
+    }
+
+    Err(FixedStrError::InvalidUtf8)
+  }
+}
+
+impl<const N: usize> From<&str> for FixedStr<N> {
+  fn from(s: &str) -> Self {
+    Self::new(s)
   }
 }
 

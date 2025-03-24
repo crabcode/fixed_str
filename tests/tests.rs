@@ -79,11 +79,12 @@ mod tests {
   }
 
   #[test]
-  fn test_try_from_slice_unsafe() {
+  #[should_panic]
+  fn test_try_from_slice_overflow() {
     const N: usize = 5;
-    let bytes = "Hell😊!".as_bytes();
+    let bytes = b"Hello!";
     let fixed = FixedStr::<N>::try_from(&bytes[..]).unwrap();
-    assert_eq!(fixed.as_str(), "Hell");
+    assert_eq!(fixed.as_str(), "Hello");
   }
   
   #[test]
