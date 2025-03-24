@@ -47,3 +47,17 @@ impl fmt::Display for FixedStrError {
 
 #[cfg(feature = "std")]
 impl std::error::Error for FixedStrError {}
+
+
+#[cfg(all(test, feature = "std"))]
+#[test]
+fn test_error_display() {
+  use super::*;
+  let overflow_error = FixedStrError::Overflow { available: 2, found: 5 };
+  assert_eq!(
+    format!("{}", overflow_error),
+    "Overflow: tried to add 5 bytes with only 2 bytes available"
+  );
+  let invalid_utf8_error = FixedStrError::InvalidUtf8;
+  assert_eq!(format!("{}", invalid_utf8_error), "Invalid UTF-8");
+}

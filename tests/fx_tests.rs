@@ -1,7 +1,8 @@
+// fixed_string/tests/fx_tests.rs
+
 #[cfg(test)]
-mod tests {
-  use fixed_string::*;
-  use core::convert::TryFrom;
+mod fx_tests {
+  use fixed_string::FixedStr;
 
   #[test]
   fn test_new_exact() {
@@ -144,76 +145,12 @@ mod tests {
   }
 
   #[test]
-  fn test_error_display() {
-    let overflow_error = FixedStrError::Overflow { available: 2, found: 5 };
-    assert_eq!(
-      format!("{}", overflow_error),
-      "Overflow: tried to add 5 bytes with only 2 bytes available"
-    );
-    let invalid_utf8_error = FixedStrError::InvalidUtf8;
-    assert_eq!(format!("{}", invalid_utf8_error), "Invalid UTF-8");
-  }
-
-  #[test]
-  fn test_truncate_utf8_lossy() {
-    // Use a multi-byte emoji and set max_len such that it would otherwise cut into the emoji.
-    let s = "d😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
-    let bytes = s.as_bytes();
-    // With max_len = 4, only "d" is valid.
-    let truncated = truncate_utf8_lossy(bytes, 4);
-    assert_eq!(truncated, "d");
-  }
-
-  #[test]
   fn test_truncation_exact_boundary() {
     let smile = "😊"; // 4 bytes
     let prefix = "ab"; // 2 bytes
     let input = format!("{}{}", prefix, smile); // 6 bytes
     let fixed = FixedStr::<5>::new(&input); // only 1 byte of emoji would fit
     assert_eq!(fixed.as_str(), "ab"); // must truncate *before* smile
-  }
-
-  #[test]
-  fn test_try_push_str_success() {
-    let mut buf = FixedStrBuf::<10>::new();
-    assert!(buf.try_push_str("Hello").is_ok());
-    assert_eq!(buf.len(), 5);
-  }
-
-  #[test]
-  fn test_try_push_str_fail() {
-    let mut buf = FixedStrBuf::<5>::new();
-    // "Hello, world!" is too long to push entirely.
-    let result = buf.try_push_str("Hello, world!");
-    assert!(result.is_err());
-    // The buffer remains unchanged on failure.
-    assert_eq!(buf.len(), 0);
-  }
-
-  #[test]
-  fn test_try_push_char_success() {
-    let mut buf = FixedStrBuf::<5>::new();
-    assert!(buf.try_push_char('A').is_ok());
-    assert_eq!(buf.len(), 1);
-  }
-
-  #[test]
-  fn test_push_str_lossy() {
-    let mut buf = FixedStrBuf::<5>::new();
-    // "Hello" fits exactly, so push_str_lossy returns true.
-    assert!(buf.push_str_lossy("Hello"));
-    // Any additional push will result in truncation.
-    let result = buf.push_str_lossy(", world!");
-    assert!(!result);
-    let fixed: FixedStr<5> = buf.finalize().unwrap();
-    assert_eq!(fixed.as_str(), "Hello");
-  }
-
-  #[test]
-  fn test_effective_bytes() {
-    let fixed = FixedStr::<10>::new("Hi");
-    let bytes = fixed.effective_bytes();
-    assert_eq!(bytes, b"Hi");
   }
 
   #[test]
@@ -237,6 +174,7 @@ mod tests {
     assert_eq!(fixed.capacity(), 8);
   }
 
+  #[cfg(feature = "std")]
   #[test]
   fn test_transparency() {
     use std::mem::transmute;

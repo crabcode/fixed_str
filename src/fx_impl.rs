@@ -222,3 +222,70 @@ pub mod std_ext {
     }
   }
 }
+
+#[cfg(test)]
+mod impl_tests {
+  use super::*;
+
+  #[test]
+  fn test_set_success() {
+      // Test that FixedStr::set successfully replaces the content when it fits.
+      let mut fixed = FixedStr::<10>::new("Hello");
+      assert_eq!(fixed.as_str(), "Hello");
+      fixed.set("Rust").unwrap();
+      assert_eq!(fixed.as_str(), "Rust");
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_set_overflow() {
+      // Test that FixedStr::set panics (via the Exact mode) when the input is too long.
+      let mut fixed = FixedStr::<5>::new("Hi");
+      // This should panic because "Hello, world!" is longer than 5 bytes.
+      fixed.set("Hello, world!").unwrap();
+  }
+
+  #[test]
+  fn test_set_lossy() {
+      // Test that FixedStr::set_lossy truncates the input safely.
+      let mut fixed = FixedStr::<5>::new("Hello");
+      fixed.set_lossy("Rustaceans");
+      // "Rustaceans" is too long for 5 bytes; it is expected to be truncated safely,
+      // for example to "Rusta" (assuming that is the valid UTF‑8 prefix).
+      assert_eq!(fixed.as_str(), "Rusta");
+  }
+
+  #[test]
+  fn test_ordering() {
+      // Test ordering between FixedStr values.
+      let a = FixedStr::<10>::new("Apple");
+      let b = FixedStr::<10>::new("Banana");
+      let c = FixedStr::<10>::new("Apple");
+      assert!(a < b);
+      assert_eq!(a, c);
+  }
+
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_from_string_and_into_string() {
+      // Test conversion from String to FixedStr and back.
+      let s = String::from("Hello");
+      let fixed: FixedStr<10> = s.clone().into();
+      assert_eq!(fixed.as_str(), "Hello");
+      let s2: String = fixed.into();
+      assert_eq!(s2, "Hello");
+  }
+
+  #[test]
+  fn test_as_mut_bytes() {
+      // Test that modifying the mutable bytes directly affects the effective string.
+      let mut fixed = FixedStr::<10>::new("Hello");
+      {
+          let bytes = fixed.as_mut_bytes();
+          // Change the first byte from 'H' to 'J'
+          bytes[0] = b'J';
+      }
+      assert_eq!(fixed.as_str(), "Jello");
+  }
+
+}

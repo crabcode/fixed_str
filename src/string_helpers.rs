@@ -146,8 +146,18 @@ pub fn copy_into_buffer<const N: usize>(src: &[u8], mode: BufferCopyMode) -> Res
 }
 
 #[cfg(test)]
-mod tests {
+mod helper_tests {
   use super::*;
+
+  #[test]
+  fn test_truncate_utf8_lossy() {
+    // Use a multi-byte emoji and set max_len such that it would otherwise cut into the emoji.
+    let s = "d😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
+    let bytes = s.as_bytes();
+    // With max_len = 4, only "d" is valid.
+    let truncated = truncate_utf8_lossy(bytes, 4);
+    assert_eq!(truncated, "d");
+  }
 
   #[test]
   fn test_exact_success() {

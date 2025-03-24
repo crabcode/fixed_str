@@ -75,3 +75,11 @@ impl<const N: usize> Iterator for EffectiveBytesIter<N> {
     }
   }
 }
+
+#[cfg(test)]
+#[test]
+fn test_effective_bytes() {
+  let fixed = FixedStr::<10>::new("Hi");
+  let bytes = fixed.effective_bytes();
+  assert_eq!(bytes, b"Hi");
+}
