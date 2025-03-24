@@ -2,6 +2,19 @@
 
 use crate::EffectiveBytes;
 
+/// Enforces `FixedStr` capacities of greater than zero.
+///
+/// # Parameters
+/// 
+/// - `n`: The N in question.
+/// 
+/// # Panics
+/// 
+/// Panics if N == 0
+pub const fn panic_on_zero(n: usize) {
+  assert!(n > 0, "FixedStr capacity N must be greater than zero");
+}
+
 /// Computes the maximum number of bytes from `input` that can be copied
 /// into a buffer of size `capacity` without splitting a multi-byte UTF‑8 character.
 ///

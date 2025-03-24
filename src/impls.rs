@@ -75,6 +75,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
   /// 
   /// Returns `FixedStr` if successful.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+    panic_on_zero(N);
     let bytes = slice.effective_bytes();
     let len = bytes.len();
     if len > N {

@@ -18,7 +18,12 @@ impl<const N: usize> FixedStrBuf<N> {
   pub fn len(&self) -> usize { self.len }
 
   /// Creates a new, empty FixedStrBuf.
+  /// 
+  /// # Panics
+  /// 
+  /// Panics if N == 0.
   pub const fn new() -> Self {
+    panic_on_zero(N);
     Self { buffer: [0u8; N], len: 0 }
   }
 
@@ -117,11 +122,11 @@ impl<const N: usize> fmt::Debug for FixedStrBuf<N> {
       Err(_) => {
         #[cfg(feature = "std")]
         {
-          write!(f, "FixedStrBuf<{N}>(<invalid UTF-8>)\n{}", FixedStr::<N>::format_hex(&self.buffer[..self.len], 8))
+          write!(f, "FixedStrBuf<{}>(<invalid UTF-8>)\n{}", N, FixedStr::<N>::format_hex(&self.buffer[..self.len], 8))
         }
         #[cfg(not(feature = "std"))]
         {
-          write!(f, "FixedStrBuf<{N}>(<invalid UTF-8>) {:?}", &self.buffer[..self.len])
+          write!(f, "FixedStrBuf<{}>(<invalid UTF-8>) {:?}", N, &self.buffer[..self.len])
         }
       }
     }
@@ -153,8 +158,14 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
   }
 }
 
+/// Creates a `FixedStrBuf` from `FixedStr`
+/// 
+/// # Panics
+/// 
+/// Panics if N == 0.
 impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
   fn from(fixed: FixedStr<N>) -> Self {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let truncated = truncate_utf8_lossy(&fixed, N);
     buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
@@ -162,10 +173,16 @@ impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
   }
 }
 
+/// Tries to create a `FixedStrBuf`from `&[u8]`
+/// 
+/// # Panics
+/// 
+/// Panics if N == 0.
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let truncated = truncate_utf8_lossy(slice, N);
     buf[..truncated.len()].copy_from_slice(truncated.as_bytes());

@@ -63,7 +63,12 @@ impl<const N: usize> FixedStr<N> {
   /// let fs = FixedStr::<5>::new("Hello, World!");
   /// assert_eq!(fs.as_str(), "Hello");
   /// ```
+  /// 
+  /// # Panics
+  /// 
+  /// Panics if N == 0.
   pub fn new(input: &str) -> Self {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let valid_len = compute_valid_len(input, N);
     buf[..valid_len].copy_from_slice(&input.as_bytes()[..valid_len]);
@@ -84,7 +89,12 @@ impl<const N: usize> FixedStr<N> {
   /// in compile-time settings where partial data is acceptable.
   ///
   /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
+  /// 
+  /// # Panics
+  /// 
+  /// Panics if N == 0.
   pub const fn new_const(input: &str) -> Self {
+    panic_on_zero(N);
     let bytes = input.as_bytes();
     let mut buf = [0u8; N];
     let mut i = 0;
@@ -104,6 +114,7 @@ impl<const N: usize> FixedStr<N> {
   /// 
   /// If the slice doesn't end on a valid UTF-8 character, the string is truncated.
   pub fn from_slice(input: &[u8]) -> Self {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let truncated = truncate_utf8_lossy(input, N);
     buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
@@ -114,6 +125,7 @@ impl<const N: usize> FixedStr<N> {
   /// 
   /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
   pub fn from_slice_unsafe(slice: &[u8]) -> Self {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let len = slice.len().min(N);
     buf[..len].copy_from_slice(&slice[..len]);
@@ -124,6 +136,7 @@ impl<const N: usize> FixedStr<N> {
   /// 
   /// Truncates the string if invalid UTF-8 data is found.
   pub fn from_bytes(bytes: [u8; N]) -> Self {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let truncated = truncate_utf8_lossy(&bytes, N);
     buf[..truncated.len()].copy_from_slice(truncated.as_bytes());
@@ -133,7 +146,12 @@ impl<const N: usize> FixedStr<N> {
   /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
   /// 
   /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+  /// 
+  /// # Panics
+  /// 
+  /// Panics if N == 0.
   pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
+    panic_on_zero(N);
     let mut buf = [0u8; N];
     let len = bytes.len().min(N);
     buf[..len].copy_from_slice(&bytes[..len]);
@@ -211,7 +229,7 @@ impl<const N: usize> FixedStr<N> {
   pub const fn as_mut_bytes(&mut self) -> &mut [u8] {
     &mut self.data
   }
-  
+
   #[cfg(not(feature = "const_mut_refs"))]
   /// Returns the raw bytes stored in the `FixedStr` as `mut`
   pub fn as_mut_bytes(&mut self) -> &mut [u8] {
