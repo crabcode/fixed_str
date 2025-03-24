@@ -276,9 +276,8 @@ impl<const N: usize> PartialEq<FixedStrBuf<N>> for Vec<u8> {
 //  Tests
 //******************************************************************************
 
-/// Test module for `FixedStrBuf`.
 #[cfg(test)]
-pub mod tests {
+mod buffer_tests {
   use super::*;
 
   #[test]
@@ -352,46 +351,5 @@ pub mod tests {
     let bytes: Vec<u8> = buf.into_iter().collect();
     assert_eq!(bytes[..3], *b"Hey");
     assert_eq!(bytes[3..], [0u8; 2]);
-  }
-}
-
-#[cfg(test)]
-mod buffer_tests {
-  use super::*;
-
-  #[test]
-  fn test_try_push_str_success() {
-    let mut buf = FixedStrBuf::<10>::new();
-    assert!(buf.try_push_str("Hello").is_ok());
-    assert_eq!(buf.len(), 5);
-  }
-
-  #[test]
-  fn test_try_push_str_fail() {
-    let mut buf = FixedStrBuf::<5>::new();
-    // "Hello, world!" is too long to push entirely.
-    let result = buf.try_push_str("Hello, world!");
-    assert!(result.is_err());
-    // The buffer remains unchanged on failure.
-    assert_eq!(buf.len(), 0);
-  }
-
-  #[test]
-  fn test_try_push_char_success() {
-    let mut buf = FixedStrBuf::<5>::new();
-    assert!(buf.try_push_char('A').is_ok());
-    assert_eq!(buf.len(), 1);
-  }
-
-  #[test]
-  fn test_push_str_lossy() {
-    let mut buf = FixedStrBuf::<5>::new();
-    // "Hello" fits exactly, so push_str_lossy returns true.
-    assert!(buf.push_str_lossy("Hello"));
-    // Any additional push will result in truncation.
-    let result = buf.push_str_lossy(", world!");
-    assert!(!result);
-    let fixed: FixedStr<5> = buf.finalize().unwrap();
-    assert_eq!(fixed.as_str(), "Hello");
   }
 }

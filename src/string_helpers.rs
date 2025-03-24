@@ -145,6 +145,11 @@ pub fn copy_into_buffer<const N: usize>(src: &[u8], mode: BufferCopyMode) -> Res
   Ok(buf)
 }
 
+//******************************************************************************
+//  Tests
+//******************************************************************************
+
+/// Test module for `string_helpers`.
 #[cfg(test)]
 mod helper_tests {
   use super::*;

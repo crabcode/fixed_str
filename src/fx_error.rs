@@ -48,6 +48,9 @@ impl fmt::Display for FixedStrError {
 #[cfg(feature = "std")]
 impl std::error::Error for FixedStrError {}
 
+//******************************************************************************
+//  Tests
+//******************************************************************************
 
 #[cfg(all(test, feature = "std"))]
 #[test]

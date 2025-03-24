@@ -173,6 +173,81 @@ mod fx_tests {
     let fixed = FixedStr::<8>::new("abc");
     assert_eq!(fixed.capacity(), 8);
   }
+  
+  #[test]
+  fn test_from_bytes_unsafe() {
+      let bytes = *b"Raw!\0\0";
+      let fixed = FixedStr::<6>::from_bytes_unsafe(bytes);
+      assert_eq!(fixed.as_str(), "Raw!");
+  }
+
+  #[test]
+  fn test_set_and_set_lossy() {
+      let mut fixed = FixedStr::<5>::new("abc");
+      fixed.set("xy").unwrap();
+      assert_eq!(fixed.as_str(), "xy");
+
+      fixed.set_lossy("hello world"); // should truncate
+      assert_eq!(fixed.as_str(), "hello");
+  }
+
+  #[test]
+  fn test_is_valid() {
+      let valid = FixedStr::<5>::new("abc");
+      assert!(valid.is_valid());
+
+      let bytes = [0xff, 0xff, 0, 0, 0];
+      let invalid = FixedStr::<5>::from_bytes(bytes);
+      assert!(!invalid.is_valid());
+  }
+
+  #[test]
+  fn test_as_mut_bytes() {
+      let mut fixed = FixedStr::<4>::new("rust");
+      let bytes = fixed.as_mut_bytes();
+      bytes[0] = b'R';
+      assert_eq!(fixed.as_str(), "Rust");
+  }
+
+  #[test]
+  fn test_byte_iter() {
+      let fixed = FixedStr::<5>::new("abc");
+      let bytes: Vec<u8> = fixed.byte_iter().collect();
+      assert_eq!(bytes[..3], *b"abc");
+      assert_eq!(bytes[3..], [0u8; 2]);
+  }
+
+  #[test]
+  fn test_into_string() {
+      let fixed = FixedStr::<5>::new("Hi");
+      let s: String = fixed.into_string();
+      assert_eq!(s, "Hi");
+  }
+
+  #[test]
+  fn test_try_into_string() {
+      let valid = FixedStr::<5>::new("Yes!");
+      let string = valid.try_into_string().unwrap();
+      assert_eq!(string, "Yes!");
+
+      let also_valid = FixedStr::<5>::new("Still yes!");
+      // new truncates safely
+      assert_eq!(also_valid.try_into_string().unwrap(), "Still");
+  }
+
+  #[test]
+  fn test_to_string_lossy() {
+      let fixed = FixedStr::<4>::from_bytes([b'H', 0xff, b'i', 0]);
+      let lossy = fixed.to_string_lossy();
+      assert_eq!(lossy, "H");
+  }
+
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_format_hex_function() {
+      let hex = FixedStr::<4>::format_hex(&[0xDE, 0xAD, 0xBE, 0xEF], 2);
+      assert_eq!(hex, "DE AD\nBE EF");
+  }
 
   #[cfg(feature = "std")]
   #[test]
