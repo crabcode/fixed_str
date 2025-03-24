@@ -206,6 +206,13 @@ impl<const N: usize> FixedStr<N> {
     &self.data
   }
 
+  #[cfg(feature = "const_mut_refs")]
+  /// Returns the raw bytes stored in the `FixedStr` as `mut`
+  pub const fn as_mut_bytes(&mut self) -> &mut [u8] {
+    &mut self.data
+  }
+  
+  #[cfg(not(feature = "const_mut_refs"))]
   /// Returns the raw bytes stored in the `FixedStr` as `mut`
   pub fn as_mut_bytes(&mut self) -> &mut [u8] {
     &mut self.data

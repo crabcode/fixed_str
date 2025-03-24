@@ -3,7 +3,7 @@ name = "fixed_string"
 description = "Fixed-size, null-padded UTF-8 string type with const-safe construction and binary serialization support."
 version = "0.2.1"
 edition = "2021"
-rust-version = "1.78"
+rust-version = "1.60"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/crabcode/fixed_string"
@@ -11,10 +11,11 @@ keywords = ["string", "utf8", "fixed-length", "no_std", "binrw"]
 categories = ["data-structures", "encoding", "no-std"]
 
 [features]
-default = ["std"]
+default = ["std", "const_mut_refs"]
 binrw = ["dep:binrw"]
 serde = ["dep:serde"]
 std = []
+const_mut_refs = []
 
 [dependencies]
 binrw = { version = ">=0.11.1", optional = true }  # uses Args<'a> (>=0.11.0) and BinRead/BinWrite (>=0.11.1)
