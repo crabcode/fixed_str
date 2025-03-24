@@ -176,7 +176,7 @@ impl<const N: usize> FixedStr<N> {
     let bytes = input.effective_bytes();
     let len = bytes.len();
     if len > N {
-      return Err(FixedStrError::WrongLength { expected: N, found: len });
+      return Err(FixedStrError::Overflow { available: N, found: len });
     }
     let mut buf = [0u8; N];
     buf[..len].copy_from_slice(&bytes);

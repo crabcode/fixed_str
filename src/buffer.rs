@@ -41,7 +41,7 @@ impl<const N: usize> FixedStrBuf<N> {
   pub fn try_push_str(&mut self, s: &str) -> Result<(), FixedStrError> {
     let bytes = s.effective_bytes();
     if bytes.len() > self.remaining() {
-      return Err(FixedStrError::Overflow { remaining: self.remaining(), found: bytes.len() });
+      return Err(FixedStrError::Overflow { available: self.remaining(), found: bytes.len() });
     }
     self.buffer[self.len..self.len + bytes.len()].copy_from_slice(bytes);
     self.len += bytes.len();

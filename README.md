@@ -7,7 +7,7 @@ The main type, `FixedStr<N>`, stores exactly N bytes internally. It zero-pads an
 
 ---
 
-## 📦 Features
+## Features
 
 - **Fixed Capacity:** Each `FixedStr<N>` instance uses a `[u8; N]` backing array. If the input is shorter than N, the unused bytes are zero-padded.
 - **Null-Terminated Semantics:** The string is terminated at the first `\0` byte. Data after that is preserved in memory but excluded from most string views.
@@ -23,7 +23,7 @@ The main type, `FixedStr<N>`, stores exactly N bytes internally. It zero-pads an
 
 ---
 
-## 🚀 Usage
+## Usage
 
 ```rust
 use fixed_string::FixedStr;
@@ -45,7 +45,7 @@ fn main() {
 
 ---
 
-## 🧱 `FixedStrBuf` Builder
+## `FixedStrBuf` Builder
 
 ```rust
 use fixed_string::{FixedStrBuf, FixedStr};
@@ -68,7 +68,7 @@ fn main() {
 
 ---
 
-## 🛠 API Overview
+## API Overview
 
 ### Constructors
 - `FixedStr::new(&str) -> Self`: Safely constructs with padding and truncation
@@ -125,7 +125,7 @@ struct Header {
 
 ---
 
-## 📜 License
+## License
 
 Licensed under either:
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -133,7 +133,7 @@ Licensed under either:
 
 ---
 
-## 🔗 Links
+## Links
 
 - [Crate on crates.io](https://crates.io/crates/fixed_string)
 - [Docs.rs](https://docs.rs/fixed_string)
