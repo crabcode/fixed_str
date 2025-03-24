@@ -1,3 +1,5 @@
+// fixed_string/src/string_helpers.rs
+
 #[cfg(feature = "memchr")]
 use memchr::memchr;
 

@@ -1,4 +1,4 @@
-// fixed_string/src/fixed_str_error.rs
+// fixed_string/src/fx_error.rs
 
 use super::*;
 

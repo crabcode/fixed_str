@@ -1,4 +1,4 @@
-// fixed_string/src/fixed_string_impl.rs
+// fixed_string/src/fx_impl.rs
 
 use super::*;
 use core::usize;
