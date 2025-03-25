@@ -70,7 +70,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
     /// Attempts to create a `FixedStr` from a byte slice.
     ///
     /// # Error
-    /// - `OverFlow`: Thrown if the slice's effective bytes are longer than N.
+    /// - `Overflow`: Thrown if the slice's effective bytes are longer than N.
     /// - `InvalidUtf8`: Thrown if the resulting string isn't valid UTF-8.
     ///
     /// Returns `FixedStr` if successful.
@@ -88,7 +88,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
 }
 
 impl<const N: usize> From<&str> for FixedStr<N> {
-    /// **Warning:** If the input string contains `\0` or invaliid UTF-8 code, the rest will be truncated.
+    /// **Warning:** If the input string contains `\0` or invalid UTF-8 code, the rest will be truncated.
     fn from(s: &str) -> Self {
         Self::new(s)
     }

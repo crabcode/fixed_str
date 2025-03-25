@@ -1,4 +1,4 @@
-// fixed_str/src/fs_buf.rs
+// fixed_str/src/fs_buffer.rs
 
 use super::*;
 
@@ -65,7 +65,10 @@ impl<const N: usize> FixedStrBuf<N> {
 
     /// Attempts to append a single character to the buffer.
     ///
-    /// Returns an error if the character’s UTF‑8 representation doesn’t fit.
+    /// Returns an error if the character’s UTF‑8 encoding doesn’t fit in the remaining space.
+    ///
+    /// **Note:** If the character encodes to include a null byte (`\0`), any bytes after it
+    /// will be ignored when finalizing or displaying the result.
     pub fn try_push_char(&mut self, c: char) -> Result<(), FixedStrError> {
         let mut buf = [0u8; 4];
         let s = c.encode_utf8(&mut buf);
@@ -92,10 +95,13 @@ impl<const N: usize> FixedStrBuf<N> {
 
         bytes.len() == s.len()
     }
-
-    /// Finalizes the builder into a FixedStr.
+    
+    /// Finalizes the buffer into a `FixedStr`.
     ///
-    /// Returns `Err` only if the finalized buffer contains invalid UTF-8.
+    /// This pads the remaining space with zeros and returns a `FixedStr`.
+    ///
+    /// **Note:** If the written content contains a null byte (`\0`), the resulting string
+    /// will terminate at that point and ignore any bytes that follow.
     pub fn finalize(mut self) -> Result<FixedStr<N>, FixedStrError> {
         for i in self.len..N {
             self.buffer[i] = 0;

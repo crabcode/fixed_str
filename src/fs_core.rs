@@ -1,4 +1,4 @@
-// fixed_str/src/fixed_str.rs
+// fixed_str/src/fs_core.rs
 
 use super::*;
 
@@ -6,7 +6,7 @@ use super::*;
 ///
 /// Internally, the string is stored in a `[u8; N]` array.
 /// Unused bytes are left as zeros. When converting to a `&str`,
-/// the first `0` byte is considered the end of the string.
+/// the first `\0` byte is considered the end of the string.
 ///
 /// # Examples
 /// ```
@@ -25,7 +25,7 @@ pub struct FixedStr<const N: usize> {
 ///
 /// Internally, the string is stored in a `[u8; N]` array.
 /// Unused bytes are left as zeros. When converting to a `&str`,
-/// the first `0` byte is considered the end of the string.
+/// the first `\0` byte is considered the end of the string.
 ///
 /// # Examples
 /// ```
@@ -58,11 +58,13 @@ impl<const N: usize> FixedStr<N> {
 
     /// Creates a new `FixedStr` from the given input string.
     ///
-    /// The input is converted to bytes and copied into a fixed–size buffer.
-    /// If the input is longer than the capacity, it is safely truncated at the
-    /// last valid UTF‑8 boundary. If the input is shorter, the remaining bytes
-    /// are filled with zeros.
-    ///
+    /// The input is copied into a fixed–size buffer. If it's longer than `N`,
+    /// it is truncated safely at the last valid UTF‑8 boundary. If shorter,
+    /// the remaining bytes are filled with zeros.
+    /// 
+    /// **Note:** If the input contains a null byte (`\0`), the string terminates there.
+    /// Any content after the first null byte is ignored.
+    /// 
     /// # Examples
     /// ```
     /// use fixed_str::FixedStr;
@@ -112,15 +114,15 @@ impl<const N: usize> FixedStr<N> {
 
         Self { data: buf }
     }
-    /// Creates a `FixedStr` from a slice.
+    /// Creates a `FixedStr` from a byte slice.
     ///
-    /// If the slice length is less than `N`, only the first `slice.len()` bytes
-    /// are copied (and the rest remain zero).
+    /// If the slice length is less than `N`, only the first `slice.len()` bytes are
+    /// copied. If it's longer than `N`, only the first `N` bytes are used, truncated
+    /// safely at a valid UTF-8 boundary.
     ///
-    /// If the slice is longer than `N`, only the first `N` bytes are used.
-    ///
-    /// If the slice doesn't end on a valid UTF-8 character, the string is truncated.
-    ///
+    /// **Note:** If the slice contains a null byte (`\0`), the effective string will
+    /// end there.
+    /// 
     /// # Panics
     /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn from_slice(input: &[u8]) -> Self {
@@ -130,9 +132,16 @@ impl<const N: usize> FixedStr<N> {
         }
     }
 
-    /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
+    /// Creates a `FixedStr` from a slice without validating UTF‑8.
     ///
-    /// **Warning:** Use with care—may produce values that panic on `as_str()` or comparison.
+    /// This stores all bytes up to capacity, even if the result is not valid UTF‑8.
+    ///
+    /// **Note:** Any null byte (`\0`) will terminate the string early when using
+    /// `as_str()` or when comparing values.
+    /// 
+    /// # Warning
+    /// 
+    /// Use with care—may produce values that panic on `as_str()` or comparison.
     ///
     /// # Panics
     /// Panics if `N == 0`. Zero-length strings are not supported.
@@ -146,6 +155,9 @@ impl<const N: usize> FixedStr<N> {
     /// Constructs a `FixedStr` from an array of bytes.
     ///
     /// Interprets a full byte array as a UTF‑8 string, truncating only for invalid boundaries.
+    /// 
+    /// **Note:** If the byte array contains a null byte (`\0`), it will terminate the string
+    /// early when interpreted or displayed.
     ///
     /// # Panics
     /// Panics if `N == 0`. Zero-length strings are not supported.
@@ -156,9 +168,17 @@ impl<const N: usize> FixedStr<N> {
         }
     }
 
-    /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
+    /// Stores a byte array without UTF-8 validation.
     ///
-    /// **Warning:** Use with care—may produce values that panic on `as_str()` or comparison.
+    /// The bytes are used as-is. This may result in invalid UTF-8,
+    /// which can cause `as_str()` to panic or `try_as_str()` to fail.
+    ///
+    /// **Note:** The first null byte (`\0`) still acts as a terminator when converting
+    /// or comparing strings.
+    /// 
+    /// # Warning
+    /// 
+    /// Use with care—may produce values that panic on `as_str()` or comparison.
     ///
     /// # Panics
     /// Panics if `N == 0`. Zero-length strings are not supported.

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] – 2025-03-25
+
+### Added
+- **`truncate(len)` method:** Added `truncate()` to `FixedStr` and `FixedStrBuf` for shortening visible string length in-place.
+
+### Changed
+- **Updated crate-level and function-level docs** for clarity, accuracy, and consistency with actual behavior.
+- **Corrected misleading note** on `FixedStr::new_const` to reflect that UTF‑8 is now always respected, even at compile time.
+- Improved descriptions for `from_bytes`, `set_lossy`, and other modifiers to better reflect truncation and null-termination behavior.
+
+### Fixed
+- Corrected docblocks and comments referring to outdated runtime validation behavior.
+
+
 ## [0.9.0] - 2025-03-25
 ### Added
 - **FixedStr & FixedStrBuf:** Introduced a fixed–capacity, null–padded UTF‑8 string type and its incremental builder.
