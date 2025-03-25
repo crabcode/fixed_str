@@ -45,11 +45,11 @@ impl<const N: usize> FixedStr<N> {
     }
     /// Returns the number of valid bytes up to the first zero byte.
     pub fn len(&self) -> usize {
-        self.effective_bytes().len()
+        find_first_null(self)
     }
     /// Returns wether the effective string is empty.
     pub fn is_empty(&self) -> bool {
-        self.effective_bytes().len() > 0
+        self.len() == 0
     }
 
     //****************************************************************************
