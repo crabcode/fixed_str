@@ -27,13 +27,13 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-fixed_string = "0.2.1"
+fixed_string = "0.9"
 ```
 
 Or run:
 
 ```vim
-cargo add fixed_string --feature serde
+cargo add fixed_string [--feature serde]
 ```
 
 Optional feature flags include:

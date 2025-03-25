@@ -85,8 +85,8 @@ impl<const N: usize> FixedStr<N> {
   ///
   /// # Warning
   ///
-  /// This method **does not report truncation**. It is intended for use
-  /// in compile-time settings where partial data is acceptable.
+  /// This method **does not validate UTF-8** and **does not report truncation**.
+  /// It is intended for use in compile-time settings where partial data is acceptable.
   ///
   /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
   /// 
