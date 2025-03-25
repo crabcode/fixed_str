@@ -167,7 +167,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    let buf = copy_into_buffer(&slice, BufferCopyMode::Exact).unwrap();
+    let buf = copy_into_buffer(&slice, BufferCopyMode::Exact)?;
     Ok(Self { buffer: buf, len: buf.len() })
   }
 }

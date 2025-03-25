@@ -79,7 +79,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    let buf = copy_into_buffer(&slice.effective_bytes(), BufferCopyMode::Exact).unwrap();
+    let buf = copy_into_buffer(&slice.effective_bytes(), BufferCopyMode::Exact)?;
     let result = Self { data: buf };
     match result.is_valid() {
       true => Ok(result),

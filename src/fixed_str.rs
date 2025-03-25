@@ -165,7 +165,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
-    self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Exact).unwrap();
+    self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Exact)?;
     Ok(())
   }
 
