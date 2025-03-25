@@ -1,12 +1,24 @@
 // fixed_str/src/lib.rs
 
-//! A fixed–length, null–padded UTF‑8 string type.
+//! A fixed–capacity, null–padded UTF‑8 string type for predictable layout and safe truncation.
 //!
-//! `FixedStr<N>` stores exactly N bytes and pads or truncates as needed.
+//! `FixedStr<N>` always stores exactly `N` bytes in a `[u8; N]` array.
+//! Visible content ends at the first `\0`, forming the **effective string**—used for comparisons, hashing, and display.
 //!
-//! # Note on UTF‑8 Safety
-//! When using `new`, if the input is longer than N, it is safely truncated at the last valid UTF‑8 boundary.
-//! The `new_const` method does not perform this check and should be used with care.
+//! # Behavior
+//! - **Shorter input** → null-padded to fill the buffer.
+//! - **Longer input** → truncated safely at the last valid UTF-8 boundary.
+//! - **`\0` in input** → string terminates there; remaining content is ignored.
+//!
+//! # Philosophy
+//! - **String-first semantics:** Treats the content as a true string, not just a byte buffer.
+//! - **Lossy by default:** Truncation favors UTF‑8 correctness over byte preservation.
+//! - **Strict by choice:** `TryFrom`, `FixedStrBuf`, and unsafe methods offer stricter control.
+//! - **Const-ready:** Use [`FixedStr::new_const`] for compile-time construction (with silent truncation).
+//!
+//! Also includes:
+//! - [`FixedStrBuf<N>`]: a builder with boundary-aware methods like `try_push_str()` and `push_str_lossy()`
+//! - Support for `serde`, `binrw`, and `no_std` environments.
 
 #![deny(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]

@@ -70,13 +70,13 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
     /// Attempts to create a `FixedStr` from a byte slice.
     ///
     /// # Error
-    /// - `WrongLength`: Thrown if the slice's effective bytes are longer than N.
+    /// - `OverFlow`: Thrown if the slice's effective bytes are longer than N.
     /// - `InvalidUtf8`: Thrown if the resulting string isn't valid UTF-8.
     ///
     /// Returns `FixedStr` if successful.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
         let buf = copy_into_buffer(slice.effective_bytes(), BufferCopyMode::Exact)?;
         let result = Self { data: buf };

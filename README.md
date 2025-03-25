@@ -27,7 +27,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-fixed_str = "0.9"
+fixed_str = "0.9.1"
 ```
 
 Or run:

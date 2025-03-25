@@ -77,7 +77,7 @@ impl<const N: usize> FixedStr<N> {
     /// ```
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn new(input: &str) -> Self {
         let buf = copy_into_buffer(input.as_bytes(), BufferCopyMode::Truncate).unwrap();
         Self { data: buf }
@@ -85,23 +85,19 @@ impl<const N: usize> FixedStr<N> {
 
     /// Creates a new `FixedStr` at compile time, truncating at the last valid UTF-8 boundary.
     ///
-    /// Unlike [`FixedStr::new`], this method does **not** check whether the input fits
-    /// fully or whether any characters were truncated.
-    ///
     /// If the string contains `\0`, the rest will be truncated.
     ///
     /// If the string contains multibyte characters near the edge of the buffer,
     /// they will be omitted silently. If no valid boundary is found, the result may be empty.
     ///
-    /// # Warning
+    /// # Behavior
     ///
-    /// This method **does not validate UTF-8** and **does not report truncation**.
-    /// It is intended for use in compile-time settings where partial data is acceptable.
+    /// Ensures truncation at a valid UTF‑8 boundary, but does **not report** if truncation occurred.
     ///
     /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub const fn new_const(input: &str) -> Self {
         panic_on_zero(N);
         let bytes = input.as_bytes();
@@ -118,13 +114,15 @@ impl<const N: usize> FixedStr<N> {
     }
     /// Creates a `FixedStr` from a slice.
     ///
-    /// If the slice length is less than `N`, only the first `slice.len()` bytes are copied (and the rest remain zero).
+    /// If the slice length is less than `N`, only the first `slice.len()` bytes
+    /// are copied (and the rest remain zero).
+    ///
     /// If the slice is longer than `N`, only the first `N` bytes are used.
     ///
     /// If the slice doesn't end on a valid UTF-8 character, the string is truncated.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn from_slice(input: &[u8]) -> Self {
         // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
         Self {
@@ -134,10 +132,10 @@ impl<const N: usize> FixedStr<N> {
 
     /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
     ///
-    /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+    /// **Warning:** Use with care—may produce values that panic on `as_str()` or comparison.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn from_slice_unsafe(slice: &[u8]) -> Self {
         // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
         Self {
@@ -147,10 +145,10 @@ impl<const N: usize> FixedStr<N> {
 
     /// Constructs a `FixedStr` from an array of bytes.
     ///
-    /// Truncates the string if invalid UTF-8 data is found.
+    /// Interprets a full byte array as a UTF‑8 string, truncating only for invalid boundaries.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn from_bytes(bytes: [u8; N]) -> Self {
         // BufferCopyMode::Slice is guaranteed to be safe (including UTF-8 validity)
         Self {
@@ -160,10 +158,10 @@ impl<const N: usize> FixedStr<N> {
 
     /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
     ///
-    /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+    /// **Warning:** Use with care—may produce values that panic on `as_str()` or comparison.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
         // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
         Self {
@@ -177,14 +175,14 @@ impl<const N: usize> FixedStr<N> {
 
     /// Updates the `FixedStr` with a new value, replacing the current content.
     ///
-    /// The input string is copied into the internal buffer. If the input exceeds
-    /// the capacity, an error is thrown. If the input is shorter than the capacity,
-    /// the remaining bytes are set to zero.
+    /// The input string is copied into the internal buffer. If the input is longer
+    /// than N, an error is thrown. If the input is shorter than N, the remaining
+    /// bytes are set to zero.
     ///
     /// **Warning:** if `input` contains `\0`, the rest will be truncated.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
         self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Exact)?;
         Ok(())
@@ -204,7 +202,7 @@ impl<const N: usize> FixedStr<N> {
     /// assert_eq!(fs.as_str(), "World");
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn set_lossy(&mut self, input: &str) {
         // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
         self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
@@ -213,6 +211,18 @@ impl<const N: usize> FixedStr<N> {
     /// Clears the `FixedStr`, setting all bytes to zero.
     pub fn clear(&mut self) {
         self.data = [0u8; N];
+    }
+
+    /// Truncates the fixed string to `new_len` bytes.
+    ///
+    /// If `new_len` is less than the current effective length, the effective string is cut
+    /// off at `new_len` and all bytes from `new_len` to capacity are set to zero. If `new_len`
+    /// is greater than or equal to the current effective length, this method does nothing.
+    pub fn truncate(&mut self, new_len: usize) {
+        let current = self.len();
+        if new_len < current {
+            self.data[new_len..N].fill(0);
+        }
     }
 
     //****************************************************************************
@@ -268,7 +278,7 @@ impl<const N: usize> FixedStr<N> {
 
     /// Returns a formatted hex dump of the data.
     ///
-    /// The bytes are grouped in 8–byte chunks, with each chunk on a new line.
+    /// The bytes are grouped in 16–byte chunks, with each chunk on a new line.
     #[cfg(feature = "std")]
     pub fn hex_dump(&self) {
         let mut buf = Vec::with_capacity(&self.len() * 3 - 1);

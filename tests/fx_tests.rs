@@ -217,6 +217,31 @@ mod fs_tests {
         assert_eq!(bytes[3..], [0u8; 2]);
     }
 
+    #[test]
+    fn test_truncate_reduces_effective_length() {
+        // Create a FixedStr with "HelloWorld" (10 bytes).
+        let mut s = FixedStr::<10>::new("HelloWorld");
+        assert_eq!(s.as_str(), "HelloWorld");
+        // Truncate to 5 bytes.
+        s.truncate(5);
+        assert_eq!(s.as_str(), "Hello");
+        // Verify that the remainder of the buffer is zeroed out.
+        for &b in &s.as_bytes()[5..] {
+            assert_eq!(b, 0);
+        }
+    }
+
+    #[test]
+    fn test_truncate_no_effect_when_new_len_is_greater() {
+        // Create a FixedStr with "Hi" (2 bytes effective).
+        let mut s = FixedStr::<10>::new("Hi");
+        assert_eq!(s.as_str(), "Hi");
+        // Attempt to "truncate" to a longer length.
+        s.truncate(5);
+        // The effective string remains unchanged.
+        assert_eq!(s.as_str(), "Hi");
+    }
+
     #[cfg(feature = "std")]
     #[test]
     fn test_into_string() {

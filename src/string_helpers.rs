@@ -17,7 +17,7 @@ pub enum BufferCopyMode {
 /// Enforces `FixedStr` capacity to be greater than zero.
 ///
 /// # Panics
-/// Panics if N == 0.
+/// Panics if `N == 0`. Zero-length strings are not supported.
 pub const fn panic_on_zero(n: usize) {
     assert!(n > 0, "FixedStr capacity N must be greater than zero");
 }
@@ -127,7 +127,7 @@ pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
 /// Depending on `mode`, it will either error (Exact) or truncate (Truncate) if the source is too long.
 ///
 /// # Panics
-/// Panics if N == 0.
+/// Panics if `N == 0`. Zero-length strings are not supported.
 pub fn copy_into_buffer<const N: usize>(
     src: &[u8],
     mode: BufferCopyMode,

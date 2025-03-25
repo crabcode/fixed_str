@@ -30,7 +30,7 @@ impl<const N: usize> FixedStrBuf<N> {
     /// Creates a new, empty FixedStrBuf.
     ///
     /// # Panics
-    /// Panics if N == 0.
+    /// Panics if `N == 0`. Zero-length strings are not supported.
     pub const fn new() -> Self {
         panic_on_zero(N);
         Self {
@@ -95,7 +95,7 @@ impl<const N: usize> FixedStrBuf<N> {
 
     /// Finalizes the builder into a FixedStr.
     ///
-    /// This method zeros out any unused bytes in the buffer.
+    /// Returns `Err` only if the finalized buffer contains invalid UTF-8.
     pub fn finalize(mut self) -> Result<FixedStr<N>, FixedStrError> {
         for i in self.len..N {
             self.buffer[i] = 0;
@@ -107,6 +107,20 @@ impl<const N: usize> FixedStrBuf<N> {
     pub fn clear(&mut self) {
         self.buffer.fill(0);
         self.len = 0;
+    }
+
+    /// Truncates the buffer to `new_len` bytes.
+    ///
+    /// If `new_len` is less than the current length, the buffer is shortened by
+    /// zeroing out the removed bytes and updating its length. If `new_len` is
+    /// greater than or equal to the current length, this method does nothing.
+    pub fn truncate(&mut self, new_len: usize) {
+        if new_len < self.len {
+            for i in new_len..self.len {
+                self.buffer[i] = 0;
+            }
+            self.len = new_len;
+        }
     }
 
     /// Creates a `String` from the effective bytes.
@@ -172,7 +186,7 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
 /// Creates a `FixedStrBuf` from `FixedStr`
 ///
 /// # Panics
-/// Panics if N == 0.
+/// Panics if `N == 0`. Zero-length strings are not supported.
 impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
     fn from(fixed: FixedStr<N>) -> Self {
         // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
@@ -187,7 +201,7 @@ impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
 /// Tries to create a `FixedStrBuf`from `&[u8]`
 ///
 /// # Panics
-/// Panics if N == 0.
+/// Panics if `N == 0`. Zero-length strings are not supported.
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
     type Error = FixedStrError;
     /// Attempts to create a `FixedStr` from a byte slice.
@@ -383,6 +397,34 @@ mod buffer_tests {
         let mut buf3 = FixedStrBuf::<10>::new();
         buf3.try_push_str("Apple").unwrap();
         assert_eq!(buf1, buf3);
+    }
+
+    #[test]
+    fn test_truncate_reduces_length() {
+        let mut buf = FixedStrBuf::<10>::new();
+        // Fill the buffer with "HelloWorld" (10 bytes).
+        buf.try_push_str("HelloWorld").unwrap();
+        assert_eq!(buf.len(), 10);
+        // Truncate to 5 bytes.
+        buf.truncate(5);
+        assert_eq!(buf.len(), 5);
+        // Finalize the buffer and check that the effective string is "Hello".
+        let fixed = buf.finalize().unwrap();
+        assert_eq!(fixed.as_str(), "Hello");
+        // Also check that the truncated portion of the buffer is zero.
+        for &b in &buf.as_ref()[5..] {
+            assert_eq!(b, 0);
+        }
+    }
+
+    #[test]
+    fn test_truncate_no_effect_when_new_len_is_greater() {
+        let mut buf = FixedStrBuf::<10>::new();
+        buf.try_push_str("Hi").unwrap();
+        assert_eq!(buf.len(), 2);
+        // Truncating to a value greater than current length should do nothing.
+        buf.truncate(5);
+        assert_eq!(buf.len(), 2);
     }
 
     #[cfg(feature = "std")]
