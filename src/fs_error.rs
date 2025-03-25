@@ -6,7 +6,7 @@ use super::*;
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum FixedStrError {
-    /// Returned when the length of the input exceeds size.
+    /// Returned when the length of the input exceeds capacity.
     ///
     /// This usually happens when converting from a byte slice or building a
     /// `FixedStrBuf` where the provided input exceeds capacity.

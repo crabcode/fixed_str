@@ -47,7 +47,7 @@ impl<const N: usize> FixedStr<N> {
     pub fn len(&self) -> usize {
         find_first_null(self)
     }
-    /// Returns wether the effective string is empty.
+    /// Returns whether the effective string is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -61,10 +61,10 @@ impl<const N: usize> FixedStr<N> {
     /// The input is copied into a fixed–size buffer. If it's longer than `N`,
     /// it is truncated safely at the last valid UTF‑8 boundary. If shorter,
     /// the remaining bytes are filled with zeros.
-    /// 
+    ///
     /// **Note:** If the input contains a null byte (`\0`), the string terminates there.
     /// Any content after the first null byte is ignored.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use fixed_str::FixedStr;
@@ -122,7 +122,7 @@ impl<const N: usize> FixedStr<N> {
     ///
     /// **Note:** If the slice contains a null byte (`\0`), the effective string will
     /// end there.
-    /// 
+    ///
     /// # Panics
     /// Panics if `N == 0`. Zero-length strings are not supported.
     pub fn from_slice(input: &[u8]) -> Self {
@@ -138,9 +138,9 @@ impl<const N: usize> FixedStr<N> {
     ///
     /// **Note:** Any null byte (`\0`) will terminate the string early when using
     /// `as_str()` or when comparing values.
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// Use with care—may produce values that panic on `as_str()` or comparison.
     ///
     /// # Panics
@@ -155,7 +155,7 @@ impl<const N: usize> FixedStr<N> {
     /// Constructs a `FixedStr` from an array of bytes.
     ///
     /// Interprets a full byte array as a UTF‑8 string, truncating only for invalid boundaries.
-    /// 
+    ///
     /// **Note:** If the byte array contains a null byte (`\0`), it will terminate the string
     /// early when interpreted or displayed.
     ///
@@ -175,9 +175,9 @@ impl<const N: usize> FixedStr<N> {
     ///
     /// **Note:** The first null byte (`\0`) still acts as a terminator when converting
     /// or comparing strings.
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// Use with care—may produce values that panic on `as_str()` or comparison.
     ///
     /// # Panics
@@ -285,27 +285,9 @@ impl<const N: usize> FixedStr<N> {
         self.data.iter().copied()
     }
 
-    /// Returns a hex–encoded string of the entire fixed buffer.
-    ///
-    /// Each byte is represented as a two–digit uppercase hex number.
-    pub fn as_hex<const S: usize>(&self) -> FixedStr<S> {
-        fast_format_hex(&self.data, S, None)
-    }
-
     //****************************************************************************
     //  std Functions
     //****************************************************************************
-
-    /// Returns a formatted hex dump of the data.
-    ///
-    /// The bytes are grouped in 16–byte chunks, with each chunk on a new line.
-    #[cfg(feature = "std")]
-    pub fn hex_dump(&self) {
-        let mut buf = Vec::with_capacity(&self.len() * 3 - 1);
-        dump_as_hex(self, 16, None, |b| buf.push(b));
-        let s = core::str::from_utf8(&buf).unwrap();
-        println!("{}", s);
-    }
 
     /// Converts the `FixedStr` to an owned String.
     #[cfg(feature = "std")]

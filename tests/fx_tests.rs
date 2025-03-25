@@ -278,16 +278,4 @@ mod fs_tests {
         let fixed: FixedStr<5> = unsafe { transmute(arr) };
         assert_eq!(fixed.as_str(), "Hey");
     }
-
-    #[cfg(feature = "std")]
-    #[test]
-    fn test_as_hex() {
-        const N: usize = 5;
-        let fixed = FixedStr::<N>::new("Hello");
-        // First byte needs 2 bytes, the rest 3 bytes to display: (N * 3) - 1
-        let hex: FixedStr<14> = fixed.as_hex();
-        // "Hello" → [0x48, 0x65, 0x6C, 0x6C, 0x6F]
-        let expected = "48 65 6C 6C 6F";
-        assert_eq!(hex, expected);
-    }
 }

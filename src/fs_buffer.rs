@@ -95,7 +95,7 @@ impl<const N: usize> FixedStrBuf<N> {
 
         bytes.len() == s.len()
     }
-    
+
     /// Finalizes the buffer into a `FixedStr`.
     ///
     /// This pads the remaining space with zeros and returns a `FixedStr`.
@@ -155,7 +155,8 @@ impl<const N: usize> fmt::Debug for FixedStrBuf<N> {
                 f,
                 "FixedStrBuf<{}>(<invalid UTF-8>) {:?}",
                 N,
-                fast_format_hex::<N>(&self.buffer, 16, None)
+                // Printing takes roughly 3n, so 16 * 8 * 3 as the maximum output
+                fast_format_hex::<384>(&self.buffer, 16, Some(8))
             ),
         }
     }
@@ -195,11 +196,9 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
 /// Panics if `N == 0`. Zero-length strings are not supported.
 impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
     fn from(fixed: FixedStr<N>) -> Self {
-        // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
-        let buf = copy_into_buffer(&fixed, BufferCopyMode::Truncate).unwrap();
         Self {
-            buffer: buf,
-            len: buf.len(),
+            buffer: fixed.data,
+            len: fixed.len(),
         }
     }
 }
@@ -213,9 +212,10 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
     /// Attempts to create a `FixedStr` from a byte slice.
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
         let buf = copy_into_buffer(slice, BufferCopyMode::Exact)?;
+        let effective_len = find_first_null(&buf);
         Ok(Self {
             buffer: buf,
-            len: buf.len(),
+            len: effective_len,
         })
     }
 }
@@ -431,6 +431,28 @@ mod buffer_tests {
         // Truncating to a value greater than current length should do nothing.
         buf.truncate(5);
         assert_eq!(buf.len(), 2);
+    }
+
+    #[test]
+    fn test_from_fixedstr_effective_length() {
+        // Create a FixedStr with capacity 10 from a string that doesn't fill it.
+        let fixed = FixedStr::<10>::new("Hello");
+        // Convert to a FixedStrBuf using the From<FixedStr> implementation.
+        let buf: FixedStrBuf<10> = fixed.into();
+        // The effective length should be 5 ("Hello"), not 10.
+        assert_eq!(buf.len(), 5);
+        assert_eq!(buf.effective_bytes(), b"Hello");
+    }
+
+    #[test]
+    fn test_try_from_slice_effective_length() {
+        // Create a byte slice with an embedded null.
+        let bytes = b"Hello\0World";
+        // Create a FixedStrBuf from the slice.
+        let buf = FixedStrBuf::<11>::try_from(&bytes[..]).unwrap();
+        // The effective length should stop at the null byte (index 5).
+        assert_eq!(buf.len(), 5);
+        assert_eq!(buf.effective_bytes(), b"Hello");
     }
 
     #[cfg(feature = "std")]

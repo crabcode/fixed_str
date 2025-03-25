@@ -7,17 +7,12 @@ impl<const N: usize> fmt::Debug for FixedStr<N> {
         // Use the same boundary as try_as_str for consistency.
         match self.try_as_str() {
             Ok(s) => write!(f, "{:?}", s),
-            Err(_) => {
-                #[cfg(feature = "std")]
-                {
-                    self.hex_dump();
-                    Ok(())
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    write!(f, "<invalid UTF-8> {:?}", self.as_bytes())
-                }
-            }
+            Err(_) => write!(
+                f,
+                "<invalid UTF-8>\n{:?}",
+                // Printing takes roughly 3n, so 16 * 8 * 3 as the maximum output
+                fast_format_hex::<384>(&self.data, 16, Some(8))
+            ),
         }
     }
 }

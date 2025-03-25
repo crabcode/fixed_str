@@ -79,7 +79,7 @@ pub fn truncate_utf8_lossy(bytes: &[u8], max_len: usize) -> &str {
     unsafe { core::str::from_utf8_unchecked(&bytes[..valid_len]) }
 }
 
-/// Finds the valid string boundaries with in const context.
+/// Finds the valid string boundaries within const context.
 pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
     let mut i = 0;
     let mut last_valid = 0;
