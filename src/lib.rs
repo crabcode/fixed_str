@@ -9,9 +9,14 @@
 //! The `new_const` method does not perform this check and should be used with care.
 
 #![deny(missing_docs)]
-
 #![cfg_attr(not(feature = "std"), no_std)]
-use core::{fmt, str, borrow::Borrow, cmp::Ordering, hash::{Hash, Hasher}};
+use core::{
+    borrow::Borrow,
+    cmp::Ordering,
+    fmt,
+    hash::{Hash, Hasher},
+    str,
+};
 
 #[cfg(feature = "std")]
 use std::string::String;
@@ -19,33 +24,26 @@ use std::string::String;
 #[cfg(feature = "std")]
 use std::vec::Vec;
 
+/// A trait to expose the string's non-zero bytes.
+pub mod effective_bytes;
 /// The core `FixedStr` library.
 pub mod fixed_str;
-/// Implementations for `FixedStr`.
-pub mod fx_impl;
 /// A builder in `FixedStrBuf`.
 pub mod fx_buf;
 /// Custom error type for `FixedStr`.
 pub mod fx_error;
-/// A trait to expose the string's non-zero bytes.
-pub mod effective_bytes;
+/// Implementations for `FixedStr`.
+pub mod fx_impl;
 /// Optional integrations with `binrw` or `serde`.
 pub mod serialize_ext;
 /// Helper functions.
 pub mod string_helpers;
 
+pub use effective_bytes::{EffectiveBytes, EffectiveBytesIter};
 pub use fixed_str::FixedStr;
 pub use fx_buf::FixedStrBuf;
 pub use fx_error::FixedStrError;
-pub use effective_bytes::{EffectiveBytes, EffectiveBytesIter};
 pub use string_helpers::{
-  BufferCopyMode,
-  panic_on_zero,
-  find_first_null,
-  find_valid_utf8_len,
-  find_valid_boundary,
-  truncate_utf8_lossy,
-  copy_into_buffer,
-  fast_format_hex,
-  dump_as_hex,
+    copy_into_buffer, dump_as_hex, fast_format_hex, find_first_null, find_valid_boundary,
+    find_valid_utf8_len, panic_on_zero, truncate_utf8_lossy, BufferCopyMode,
 };

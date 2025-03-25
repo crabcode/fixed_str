@@ -18,7 +18,7 @@ use super::*;
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct FixedStr<const N: usize> {
-  pub(super) data: [u8; N],
+    pub(super) data: [u8; N],
 }
 
 /// A fixed–length string with a constant size of `N` bytes.
@@ -35,249 +35,264 @@ pub struct FixedStr<const N: usize> {
 /// assert_eq!(fs.as_str(), "Hello");
 ///  ```
 impl<const N: usize> FixedStr<N> {
-  /// Returns the maximum capacity of the `FixedStr`.
-  pub const fn capacity(&self) -> usize { N }
-  /// Returns true if the bytes up to the first zero form a valid UTF-8 string.
-  pub fn is_valid(&self) -> bool { self.try_as_str().is_ok() }
-  /// Returns the number of valid bytes up to the first zero byte.
-  pub fn len(&self) -> usize { self.effective_bytes().len() }
-  /// Returns wether the effective string is empty.
-  pub fn is_empty(&self) -> bool { self.effective_bytes().len() > 0 }
-
-  //****************************************************************************
-  //  Constructors
-  //****************************************************************************
-
-  /// Creates a new `FixedStr` from the given input string.
-  ///
-  /// The input is converted to bytes and copied into a fixed–size buffer.
-  /// If the input is longer than the capacity, it is safely truncated at the
-  /// last valid UTF‑8 boundary. If the input is shorter, the remaining bytes
-  /// are filled with zeros.
-  ///
-  /// # Examples
-  /// ```
-  /// use fixed_string::FixedStr;
-  ///
-  /// // "Hello" fits exactly in a buffer of 5 bytes.
-  /// let fs = FixedStr::<5>::new("Hello");
-  /// assert_eq!(fs.as_str(), "Hello");
-  /// 
-  /// // "Hello, World!" is truncated safely to "Hello".
-  /// let fs = FixedStr::<5>::new("Hello, World!");
-  /// assert_eq!(fs.as_str(), "Hello");
-  /// ```
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn new(input: &str) -> Self {
-    let buf = copy_into_buffer(input.as_bytes(), BufferCopyMode::Truncate).unwrap();
-    Self { data: buf }
-  }
-
-  /// Creates a new `FixedStr` at compile time, truncating at the last valid UTF-8 boundary.
-  ///
-  /// Unlike [`FixedStr::new`], this method does **not** check whether the input fits
-  /// fully or whether any characters were truncated.
-  ///
-  /// If the string contains `\0`, the rest will be truncated.
-  /// 
-  /// If the string contains multibyte characters near the edge of the buffer,
-  /// they will be omitted silently. If no valid boundary is found, the result may be empty.
-  ///
-  /// # Warning
-  ///
-  /// This method **does not validate UTF-8** and **does not report truncation**.
-  /// It is intended for use in compile-time settings where partial data is acceptable.
-  ///
-  /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub const fn new_const(input: &str) -> Self {
-    panic_on_zero(N);
-    let bytes = input.as_bytes();
-    let mut buf = [0u8; N];
-    let mut i = 0;
-    let len = find_valid_boundary(bytes, N);
-
-    while i < N && i < len {
-      buf[i] = bytes[i];
-      i += 1;
+    /// Returns the maximum capacity of the `FixedStr`.
+    pub const fn capacity(&self) -> usize {
+        N
     }
-    
-    Self { data: buf }
-  }
-  /// Creates a `FixedStr` from a slice.
-  ///
-  /// If the slice length is less than `N`, only the first `slice.len()` bytes are copied (and the rest remain zero).
-  /// If the slice is longer than `N`, only the first `N` bytes are used.
-  /// 
-  /// If the slice doesn't end on a valid UTF-8 character, the string is truncated.
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn from_slice(input: &[u8]) -> Self {
-    // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
-    Self { data: copy_into_buffer(input, BufferCopyMode::Truncate).unwrap() }
-  }
-  
-  /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
-  /// 
-  /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn from_slice_unsafe(slice: &[u8]) -> Self {
-    // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
-    Self { data: copy_into_buffer(slice, BufferCopyMode::Slice).unwrap() }
-  }
+    /// Returns true if the bytes up to the first zero form a valid UTF-8 string.
+    pub fn is_valid(&self) -> bool {
+        self.try_as_str().is_ok()
+    }
+    /// Returns the number of valid bytes up to the first zero byte.
+    pub fn len(&self) -> usize {
+        self.effective_bytes().len()
+    }
+    /// Returns wether the effective string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.effective_bytes().len() > 0
+    }
 
-  /// Constructs a `FixedStr` from an array of bytes.
-  /// 
-  /// Truncates the string if invalid UTF-8 data is found.
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn from_bytes(bytes: [u8; N]) -> Self {
-    // BufferCopyMode::Slice is guaranteed to be safe (including UTF-8 validity)
-    Self { data: copy_into_buffer(&bytes, BufferCopyMode::Truncate).unwrap() }
-  }
-  
-  /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
-  /// 
-  /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
-    // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
-    Self { data: copy_into_buffer(&bytes, BufferCopyMode::Slice).unwrap() }
-  }
+    //****************************************************************************
+    //  Constructors
+    //****************************************************************************
 
+    /// Creates a new `FixedStr` from the given input string.
+    ///
+    /// The input is converted to bytes and copied into a fixed–size buffer.
+    /// If the input is longer than the capacity, it is safely truncated at the
+    /// last valid UTF‑8 boundary. If the input is shorter, the remaining bytes
+    /// are filled with zeros.
+    ///
+    /// # Examples
+    /// ```
+    /// use fixed_string::FixedStr;
+    ///
+    /// // "Hello" fits exactly in a buffer of 5 bytes.
+    /// let fs = FixedStr::<5>::new("Hello");
+    /// assert_eq!(fs.as_str(), "Hello");
+    ///
+    /// // "Hello, World!" is truncated safely to "Hello".
+    /// let fs = FixedStr::<5>::new("Hello, World!");
+    /// assert_eq!(fs.as_str(), "Hello");
+    /// ```
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn new(input: &str) -> Self {
+        let buf = copy_into_buffer(input.as_bytes(), BufferCopyMode::Truncate).unwrap();
+        Self { data: buf }
+    }
 
-  //****************************************************************************
-  //  Modifiers
-  //****************************************************************************
+    /// Creates a new `FixedStr` at compile time, truncating at the last valid UTF-8 boundary.
+    ///
+    /// Unlike [`FixedStr::new`], this method does **not** check whether the input fits
+    /// fully or whether any characters were truncated.
+    ///
+    /// If the string contains `\0`, the rest will be truncated.
+    ///
+    /// If the string contains multibyte characters near the edge of the buffer,
+    /// they will be omitted silently. If no valid boundary is found, the result may be empty.
+    ///
+    /// # Warning
+    ///
+    /// This method **does not validate UTF-8** and **does not report truncation**.
+    /// It is intended for use in compile-time settings where partial data is acceptable.
+    ///
+    /// Use [`FixedStr::new`] in runtime contexts for stricter handling.
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub const fn new_const(input: &str) -> Self {
+        panic_on_zero(N);
+        let bytes = input.as_bytes();
+        let mut buf = [0u8; N];
+        let mut i = 0;
+        let len = find_valid_boundary(bytes, N);
 
-  /// Updates the `FixedStr` with a new value, replacing the current content.
-  ///
-  /// The input string is copied into the internal buffer. If the input exceeds
-  /// the capacity, an error is thrown. If the input is shorter than the capacity,
-  /// the remaining bytes are set to zero.
-  /// 
-  /// **Warning:** if `input` contains `\0`, the rest will be truncated.
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
-    self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Exact)?;
-    Ok(())
-  }
+        while i < N && i < len {
+            buf[i] = bytes[i];
+            i += 1;
+        }
 
-  /// Truncates overflowing bytes down to the last valid UTF-8 string.
-  /// 
-  /// **Warning:** if `input` contains `\0`, the rest will be truncated.
-  /// 
-  /// # Examples
-  /// 
-  /// use fixed_string::FixedStr;
-  ///
-  /// let mut fs = FixedStr::<5>::new("Hello");
-  /// fs.set_lossy("World!");
-  /// // "World!" is truncated to "World" because the capacity is 5 bytes.
-  /// assert_eq!(fs.as_str(), "World");
-  /// 
-  /// # Panics
-  /// Panics if N == 0.
-  pub fn set_lossy(&mut self, input: &str) {
-    // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
-    self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
-  }
+        Self { data: buf }
+    }
+    /// Creates a `FixedStr` from a slice.
+    ///
+    /// If the slice length is less than `N`, only the first `slice.len()` bytes are copied (and the rest remain zero).
+    /// If the slice is longer than `N`, only the first `N` bytes are used.
+    ///
+    /// If the slice doesn't end on a valid UTF-8 character, the string is truncated.
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn from_slice(input: &[u8]) -> Self {
+        // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
+        Self {
+            data: copy_into_buffer(input, BufferCopyMode::Truncate).unwrap(),
+        }
+    }
 
-  /// Clears the `FixedStr`, setting all bytes to zero.
-  pub fn clear(&mut self) {
-    self.data = [0u8; N];
-  }
+    /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
+    ///
+    /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn from_slice_unsafe(slice: &[u8]) -> Self {
+        // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
+        Self {
+            data: copy_into_buffer(slice, BufferCopyMode::Slice).unwrap(),
+        }
+    }
 
-  //****************************************************************************
-  //  Accessors
-  //****************************************************************************
+    /// Constructs a `FixedStr` from an array of bytes.
+    ///
+    /// Truncates the string if invalid UTF-8 data is found.
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn from_bytes(bytes: [u8; N]) -> Self {
+        // BufferCopyMode::Slice is guaranteed to be safe (including UTF-8 validity)
+        Self {
+            data: copy_into_buffer(&bytes, BufferCopyMode::Truncate).unwrap(),
+        }
+    }
 
-  /// Returns the string slice representation.
-  #[track_caller]
-  pub fn as_str(&self) -> &str {
-    truncate_utf8_lossy(self, N)
-  }
+    /// `from_slice` alternate that stores all bytes without UTF-8 validity check.
+    ///
+    /// **Warning:** Does not check UTF-8 validity. Returned `FixedStr` could panic during later use.
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
+        // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
+        Self {
+            data: copy_into_buffer(&bytes, BufferCopyMode::Slice).unwrap(),
+        }
+    }
 
-  /// Attempts to interpret the stored bytes as a UTF‑8 string.
-  ///
-  /// Returns an error if the data up to the first zero byte is not valid UTF‑8.
-  pub fn try_as_str(&self) -> Result<&str, FixedStrError> {
-    str::from_utf8(self.effective_bytes()).map_err(|_| FixedStrError::InvalidUtf8)
-  }
+    //****************************************************************************
+    //  Modifiers
+    //****************************************************************************
 
-  /// Returns the raw bytes stored in the `FixedStr`.
-  pub const fn as_bytes(&self) -> &[u8] {
-    &self.data
-  }
+    /// Updates the `FixedStr` with a new value, replacing the current content.
+    ///
+    /// The input string is copied into the internal buffer. If the input exceeds
+    /// the capacity, an error is thrown. If the input is shorter than the capacity,
+    /// the remaining bytes are set to zero.
+    ///
+    /// **Warning:** if `input` contains `\0`, the rest will be truncated.
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
+        self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Exact)?;
+        Ok(())
+    }
 
-  #[cfg(feature = "const_mut_refs")]
-  /// Returns the raw bytes stored in the `FixedStr` as `mut`
-  pub const fn as_mut_bytes(&mut self) -> &mut [u8] {
-    &mut self.data
-  }
+    /// Truncates overflowing bytes down to the last valid UTF-8 string.
+    ///
+    /// **Warning:** if `input` contains `\0`, the rest will be truncated.
+    ///
+    /// # Examples
+    ///
+    /// use fixed_string::FixedStr;
+    ///
+    /// let mut fs = FixedStr::<5>::new("Hello");
+    /// fs.set_lossy("World!");
+    /// // "World!" is truncated to "World" because the capacity is 5 bytes.
+    /// assert_eq!(fs.as_str(), "World");
+    ///
+    /// # Panics
+    /// Panics if N == 0.
+    pub fn set_lossy(&mut self, input: &str) {
+        // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
+        self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
+    }
 
-  #[cfg(not(feature = "const_mut_refs"))]
-  /// Returns the raw bytes stored in the `FixedStr` as `mut`
-  pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-    &mut self.data
-  }
+    /// Clears the `FixedStr`, setting all bytes to zero.
+    pub fn clear(&mut self) {
+        self.data = [0u8; N];
+    }
 
-  /// Returns an iterator that goes through the full byte
-  /// array instead of terminating at the first `\0`.
-  pub fn byte_iter(&self) -> impl Iterator<Item = u8> + '_ {
-    self.data.iter().copied()
-  }
-  
-  /// Returns a hex–encoded string of the entire fixed buffer.
-  ///
-  /// Each byte is represented as a two–digit uppercase hex number.
-  pub fn as_hex<const S: usize>(&self) -> FixedStr<S> {
-    fast_format_hex(&self.data, S, None)
-  }
+    //****************************************************************************
+    //  Accessors
+    //****************************************************************************
 
-  //****************************************************************************
-  //  std Functions
-  //****************************************************************************
+    /// Returns the string slice representation.
+    #[track_caller]
+    pub fn as_str(&self) -> &str {
+        truncate_utf8_lossy(self, N)
+    }
 
-  /// Returns a formatted hex dump of the data.
-  ///
-  /// The bytes are grouped in 8–byte chunks, with each chunk on a new line.
-  #[cfg(feature = "std")]
-  pub fn hex_dump(&self) {
-    let mut buf = Vec::with_capacity(&self.len() * 3 - 1);
-    dump_as_hex(self, 16, None, |b| buf.push(b));
-    let s = core::str::from_utf8(&buf).unwrap();
-    println!("{}", s);
-  }
+    /// Attempts to interpret the stored bytes as a UTF‑8 string.
+    ///
+    /// Returns an error if the data up to the first zero byte is not valid UTF‑8.
+    pub fn try_as_str(&self) -> Result<&str, FixedStrError> {
+        str::from_utf8(self.effective_bytes()).map_err(|_| FixedStrError::InvalidUtf8)
+    }
 
-  /// Converts the `FixedStr` to an owned String.
-  #[cfg(feature = "std")]
-  pub fn into_string(self) -> String {
-    self.as_str().to_string()
-  }
+    /// Returns the raw bytes stored in the `FixedStr`.
+    pub const fn as_bytes(&self) -> &[u8] {
+        &self.data
+    }
 
-  /// Attempts to convert the `FixedStr` to an owned String.
-  #[cfg(feature = "std")]
-  pub fn try_into_string(self) -> Result<String, FixedStrError> {
-    self.try_as_str().map(str::to_string)
-  }
+    #[cfg(feature = "const_mut_refs")]
+    /// Returns the raw bytes stored in the `FixedStr` as `mut`
+    pub const fn as_mut_bytes(&mut self) -> &mut [u8] {
+        &mut self.data
+    }
 
-  /// Converts the `FixedStr` to an owned String in a lossy manner,
-  /// replacing any invalid UTF‑8 sequences with the Unicode replacement character.
-  #[cfg(feature = "std")]
-  pub fn to_string_lossy(&self) -> String {
-    String::from_utf8_lossy(&self.data[..self.len()]).into_owned()
-  }
+    #[cfg(not(feature = "const_mut_refs"))]
+    /// Returns the raw bytes stored in the `FixedStr` as `mut`
+    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
+        &mut self.data
+    }
+
+    /// Returns an iterator that goes through the full byte
+    /// array instead of terminating at the first `\0`.
+    pub fn byte_iter(&self) -> impl Iterator<Item = u8> + '_ {
+        self.data.iter().copied()
+    }
+
+    /// Returns a hex–encoded string of the entire fixed buffer.
+    ///
+    /// Each byte is represented as a two–digit uppercase hex number.
+    pub fn as_hex<const S: usize>(&self) -> FixedStr<S> {
+        fast_format_hex(&self.data, S, None)
+    }
+
+    //****************************************************************************
+    //  std Functions
+    //****************************************************************************
+
+    /// Returns a formatted hex dump of the data.
+    ///
+    /// The bytes are grouped in 8–byte chunks, with each chunk on a new line.
+    #[cfg(feature = "std")]
+    pub fn hex_dump(&self) {
+        let mut buf = Vec::with_capacity(&self.len() * 3 - 1);
+        dump_as_hex(self, 16, None, |b| buf.push(b));
+        let s = core::str::from_utf8(&buf).unwrap();
+        println!("{}", s);
+    }
+
+    /// Converts the `FixedStr` to an owned String.
+    #[cfg(feature = "std")]
+    pub fn into_string(self) -> String {
+        self.as_str().to_string()
+    }
+
+    /// Attempts to convert the `FixedStr` to an owned String.
+    #[cfg(feature = "std")]
+    pub fn try_into_string(self) -> Result<String, FixedStrError> {
+        self.try_as_str().map(str::to_string)
+    }
+
+    /// Converts the `FixedStr` to an owned String in a lossy manner,
+    /// replacing any invalid UTF‑8 sequences with the Unicode replacement character.
+    #[cfg(feature = "std")]
+    pub fn to_string_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.data[..self.len()]).into_owned()
+    }
 }
