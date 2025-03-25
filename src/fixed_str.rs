@@ -1,7 +1,5 @@
 // fixed_string/src/fixed_str.rs
 
-use crate::string_helpers::copy_into_buffer;
-
 use super::*;
 
 /// A fixed–length string with a constant size of `N` bytes.
@@ -242,16 +240,20 @@ impl<const N: usize> FixedStr<N> {
     fast_format_hex(&self.data, S, None)
   }
 
-  /// Returns a formatted hex dump of the data.
-  ///
-  /// The bytes are grouped in 8–byte chunks, with each chunk on a new line.
-  pub fn hex_dump(&self) {
-    
-  }
-
   //****************************************************************************
   //  std Functions
   //****************************************************************************
+
+  /// Returns a formatted hex dump of the data.
+  ///
+  /// The bytes are grouped in 8–byte chunks, with each chunk on a new line.
+  #[cfg(feature = "std")]
+  pub fn hex_dump(&self) {
+    let mut buf = Vec::with_capacity(&self.len() * 3 - 1);
+    dump_as_hex(self, 16, None, |b| buf.push(b));
+    let s = core::str::from_utf8(&buf).unwrap();
+    println!("{}", s);
+  }
 
   /// Converts the `FixedStr` to an owned String.
   #[cfg(feature = "std")]
