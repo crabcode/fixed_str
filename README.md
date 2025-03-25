@@ -67,7 +67,7 @@ fn main() {
     buf.try_push_str("Hello").unwrap();
     buf.try_push_char(' ').unwrap();
     buf.push_str_lossy("world! 👋");
-    let fixed: FixedStr<12> = buf.into_fixed();
+    let fixed: FixedStr<12> = buf.finalize();
     println!("{}", fixed); // Likely prints "Hello world!"
 }
 ```
