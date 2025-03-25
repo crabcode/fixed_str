@@ -221,14 +221,12 @@ pub fn fast_format_hex<const N: usize>(bytes: &[u8], group: usize, max_lines: Op
         }
         count_in_line = 0;
         line_count += 1;
+      } else if pos < N {
+        buffer[pos] = b' ';
+        pos += 1;
       } else {
-        if pos < N {
-          buffer[pos] = b' ';
-          pos += 1;
-        } else {
-          truncated = true;
-          break;
-        }
+        truncated = true;
+        break;
       }
     }
 
@@ -255,10 +253,7 @@ pub fn fast_format_hex<const N: usize>(bytes: &[u8], group: usize, max_lines: Op
     }
   }
 
-  // Zero out the rest of the buffer
-  for i in pos..N {
-    buffer[i] = 0;
-  }
+  buffer[pos..N].fill(0);
 
   // Safe due to construction
   crate::FixedStrBuf { buffer, len: pos }.finalize().unwrap()

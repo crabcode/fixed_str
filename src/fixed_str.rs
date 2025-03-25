@@ -40,7 +40,9 @@ impl<const N: usize> FixedStr<N> {
   /// Returns true if the bytes up to the first zero form a valid UTF-8 string.
   pub fn is_valid(&self) -> bool { self.try_as_str().is_ok() }
   /// Returns the number of valid bytes up to the first zero byte.
-  pub fn len(&self) -> usize { self.data.effective_bytes().len() }
+  pub fn len(&self) -> usize { self.effective_bytes().len() }
+  /// Returns wether the effective string is empty.
+  pub fn is_empty(&self) -> bool { self.effective_bytes().len() > 0 }
 
   //****************************************************************************
   //  Constructors
@@ -97,7 +99,7 @@ impl<const N: usize> FixedStr<N> {
     let bytes = input.as_bytes();
     let mut buf = [0u8; N];
     let mut i = 0;
-    let len = find_valid_boundary(&bytes, N);
+    let len = find_valid_boundary(bytes, N);
 
     while i < N && i < len {
       buf[i] = bytes[i];
@@ -169,7 +171,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn set(&mut self, input: &str) -> Result<(), FixedStrError> {
-    self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Exact)?;
+    self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Exact)?;
     Ok(())
   }
 
@@ -190,7 +192,7 @@ impl<const N: usize> FixedStr<N> {
   /// Panics if N == 0.
   pub fn set_lossy(&mut self, input: &str) {
     // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
-    self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
+    self.data = copy_into_buffer(input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
   }
 
   /// Clears the `FixedStr`, setting all bytes to zero.

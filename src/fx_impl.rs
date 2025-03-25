@@ -1,7 +1,6 @@
 // fixed_string/src/fx_impl.rs
 
 use super::*;
-use core::usize;
 
 impl<const N: usize> fmt::Debug for FixedStr<N> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -79,7 +78,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    let buf = copy_into_buffer(&slice.effective_bytes(), BufferCopyMode::Exact)?;
+    let buf = copy_into_buffer(slice.effective_bytes(), BufferCopyMode::Exact)?;
     let result = Self { data: buf };
     match result.is_valid() {
       true => Ok(result),
@@ -114,7 +113,7 @@ impl<const N: usize> IntoIterator for FixedStr<N> {
 impl<const N: usize> Ord for FixedStr<N> {
   fn cmp(&self, other: &Self) -> Ordering {
       // Compare only the bytes up to the first zero in each `FixedStr`.
-      self.effective_bytes().cmp(&other.effective_bytes())
+      self.effective_bytes().cmp(other.effective_bytes())
   }
 }
 

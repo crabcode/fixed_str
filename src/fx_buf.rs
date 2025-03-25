@@ -16,6 +16,8 @@ impl<const N: usize> FixedStrBuf<N> {
   pub fn remaining(&self) -> usize { N - self.len }
   /// Returns the number of bytes currently in the buffer.
   pub fn len(&self) -> usize { self.len }
+  /// Returns whether the buffer is empty.
+  pub fn is_empty(&self) -> bool { self.len == 0 }
 
   /// Creates a new, empty FixedStrBuf.
   /// 
@@ -69,7 +71,7 @@ impl<const N: usize> FixedStrBuf<N> {
     };
     
     let bytes = valid.as_bytes();
-    if bytes.len() > 0 {
+    if !bytes.is_empty() {
       self.buffer[self.len..self.len + bytes.len()].copy_from_slice(bytes);
       self.len += bytes.len();
     }
@@ -106,10 +108,7 @@ impl<const N: usize> FixedStrBuf<N> {
 
 impl<const N: usize> fmt::Display for FixedStrBuf<N> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let s = match core::str::from_utf8(&self.buffer[..self.len]) {
-      Ok(s) => s,
-      Err(_) => "<invalid UTF-8>",
-    };
+    let s = core::str::from_utf8(&self.buffer[..self.len]).unwrap_or("<invalid UTF-8>");
     write!(f, "{}", s)
   }
 }
@@ -168,7 +167,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
   type Error = FixedStrError;
   /// Attempts to create a `FixedStr` from a byte slice.
   fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-    let buf = copy_into_buffer(&slice, BufferCopyMode::Exact)?;
+    let buf = copy_into_buffer(slice, BufferCopyMode::Exact)?;
     Ok(Self { buffer: buf, len: buf.len() })
   }
 }
@@ -192,7 +191,7 @@ impl<const N: usize> IntoIterator for FixedStrBuf<N> {
 impl<const N: usize> Ord for FixedStrBuf<N> {
   fn cmp(&self, other: &Self) -> Ordering {
       // Compare only the bytes up to the first zero in each `FixedStr`.
-      self.effective_bytes().cmp(&other.effective_bytes())
+      self.effective_bytes().cmp(other.effective_bytes())
   }
 }
 
