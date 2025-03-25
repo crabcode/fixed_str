@@ -260,6 +260,39 @@ pub fn fast_format_hex<const N: usize>(bytes: &[u8], group: usize, max_lines: Op
   crate::FixedStrBuf { buffer, len: pos }.finalize().unwrap()
 }
 
+/// Outputs the full hex representation of `bytes` directly by invoking the provided
+/// `write` callback for each output byte.
+///
+/// # Parameters
+/// - `bytes`: The input byte slice to format.
+/// - `group`: Number of bytes per group. A newline is output after each full group.
+/// - `max_lines`: Optional limit to the number of lines (if `None`, output all bytes).
+/// - `write`: A callback which receives each output byte (e.g. sending it to console).
+pub fn dump_as_hex(bytes: &[u8], group: usize, max_lines: Option<usize>, mut write: impl FnMut(u8)) {
+  let mut count_in_line = 0;
+  let mut line_count = 1;
+  for (i, &b) in bytes.iter().enumerate() {
+    if i > 0 {
+      if count_in_line == group {
+        if let Some(max) = max_lines {
+          if line_count >= max {
+            break;
+          }
+        }
+        write(b'\n');
+        count_in_line = 0;
+        line_count += 1;
+      } else {
+        write(b' ');
+      }
+    }
+    let pair = HEX_TABLE[b as usize];
+    write(pair[0]);
+    write(pair[1]);
+    count_in_line += 1;
+  }
+}
+
 //******************************************************************************
 //  Tests
 //******************************************************************************
@@ -324,5 +357,36 @@ mod helper_tests {
       // - Newline then second group (line 2): three bytes → "FF FF FF"
       // The formatter stops before processing the fourth group.
       assert_eq!(hex, "FF FF FF\nFF FF FF");
+  }
+
+
+  #[cfg(feature = "std")]
+  /// Helper function to collect output into a Vec<u8> for testing.
+  fn collect_output(bytes: &[u8], group: usize, max_lines: Option<usize>) -> Vec<u8> {
+      let mut output = Vec::new();
+      dump_as_hex(bytes, group, max_lines, |b| output.push(b));
+      output
+  }
+
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_debug_format_hex_full_output() {
+      // Test with a small array and full output.
+      let bytes = [0x12, 0xAB, 0x00, 0xFF];
+      let result = collect_output(&bytes, 2, None);
+      let s = std::str::from_utf8(&result).unwrap();
+      // Expected: "12 AB\n00 FF"
+      assert_eq!(s, "12 AB\n00 FF");
+  }
+
+  #[cfg(feature = "std")]
+  #[test]
+  fn test_debug_format_hex_line_limit() {
+      // Test with 10 bytes of 0xFF; group by 3, limit to 2 lines.
+      let bytes = [0xFF; 10];
+      let result = collect_output(&bytes, 3, Some(2));
+      let s = std::str::from_utf8(&result).unwrap();
+      // Expected: "FF FF FF\nFF FF FF" (stops after 2 lines)
+      assert_eq!(s, "FF FF FF\nFF FF FF");
   }
 }

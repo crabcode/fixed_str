@@ -47,4 +47,5 @@ pub use string_helpers::{
   truncate_utf8_lossy,
   copy_into_buffer,
   fast_format_hex,
+  dump_as_hex,
 };
