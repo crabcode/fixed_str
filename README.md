@@ -82,7 +82,7 @@ fn main() {
 
 ### Constructors
 - `FixedStr::new(&str) -> Self`: Create a fixed string with proper UTF‑8 truncation.
-- `FixedStr::new_const(&str) -> Self`: Const–fn construction.
+- `FixedStr::new_const(&str) -> Self`: Const–fn compile-time construction with safe truncation.
 
 ### Modifiers
 - `set(&mut self, &str)`: Replace the content (truncated at the first `\0`).
