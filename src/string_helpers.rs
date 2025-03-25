@@ -6,11 +6,11 @@ use memchr::memchr;
 /// An enum to select copy mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferCopyMode {
-    /// Requires that the source fits entirely into the buffer.
+    /// Requires that the source fits entirely into the buffer. Panics otherwise.
     Exact,
-    /// Copies up to the capacity, discarding any extra bytes.
+    /// Copies up to the capacity, discarding any extra bytes. UTF-8 validity is not checked.
     Slice,
-    /// Copies up to the capacity, truncating safely.
+    /// Copies up to the capacity, truncating safely for UTF-8 validity.
     Truncate,
 }
 

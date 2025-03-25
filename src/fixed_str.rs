@@ -116,6 +116,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn from_slice(input: &[u8]) -> Self {
+    // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
     Self { data: copy_into_buffer(input, BufferCopyMode::Truncate).unwrap() }
   }
   
@@ -126,6 +127,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn from_slice_unsafe(slice: &[u8]) -> Self {
+    // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
     Self { data: copy_into_buffer(slice, BufferCopyMode::Slice).unwrap() }
   }
 
@@ -136,6 +138,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn from_bytes(bytes: [u8; N]) -> Self {
+    // BufferCopyMode::Slice is guaranteed to be safe (including UTF-8 validity)
     Self { data: copy_into_buffer(&bytes, BufferCopyMode::Truncate).unwrap() }
   }
   
@@ -146,6 +149,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn from_bytes_unsafe(bytes: [u8; N]) -> Self {
+    // BufferCopyMode::Slice is guaranteed to be safe (NOT including UTF-8 validity)
     Self { data: copy_into_buffer(&bytes, BufferCopyMode::Slice).unwrap() }
   }
 
@@ -185,6 +189,7 @@ impl<const N: usize> FixedStr<N> {
   /// # Panics
   /// Panics if N == 0.
   pub fn set_lossy(&mut self, input: &str) {
+    // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
     self.data = copy_into_buffer(&input.effective_bytes(), BufferCopyMode::Truncate).unwrap();
   }
 

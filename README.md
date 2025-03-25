@@ -6,11 +6,9 @@
 
 ## Overview
 
-`fixed_string` introduces a primary type, `FixedStr<N>`, which uses a `[u8; N]` array as its internal storage. Unused bytes are zero–padded and the first null byte (`\0`) serves as the string terminator. This design guarantees:
-- **Fixed capacity:** Memory usage is predictable.
-- **Null–terminated semantics:** Operations like display and string slicing respect the first `\0` as the end.
-- **UTF‑8 safety:** Input strings are truncated at valid character boundaries, ensuring no partial code points.
-- **No dynamic allocation:** Suitable for no_std environments.
+`fixed_string` introduces a primary type, `FixedStr<N>`, which uses a `[u8; N]` array as its internal storage. Unused bytes are zero–padded and the first null byte (`\0`) serves as the string terminator.
+
+The null byte terminator (`\0`) also forms the basis for all conversion and comparison, considering the effective string rather than the underlying fixed-size byte array.
 
 ## Key Features
 

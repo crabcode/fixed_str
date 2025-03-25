@@ -154,6 +154,7 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
 /// Panics if N == 0.
 impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
   fn from(fixed: FixedStr<N>) -> Self {
+    // BufferCopyMode::Truncate is guaranteed to be safe (including UTF-8 validity)
     let buf = copy_into_buffer(&fixed, BufferCopyMode::Truncate).unwrap();
     Self { buffer: buf, len: buf.len() }
   }
