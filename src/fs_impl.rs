@@ -2,51 +2,59 @@
 
 use super::*;
 
+/// Implements the Debug trait for FixedStr.
+///
+/// If the effective string is valid UTF‑8, it is printed using the Debug format.
+/// Otherwise, it prints "<invalid UTF-8>" followed by a hex dump of the underlying data.
 impl<const N: usize> fmt::Debug for FixedStr<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Use the same boundary as try_as_str for consistency.
         match self.try_as_str() {
             Ok(s) => write!(f, "{:?}", s),
             Err(_) => write!(
                 f,
                 "<invalid UTF-8>\n{:?}",
-                // Printing takes roughly 3n, so 16 * 8 * 3 as the maximum output
                 fast_format_hex::<384>(&self.data, 16, Some(8))
             ),
         }
     }
 }
 
+/// Implements the Display trait for FixedStr by displaying its effective string.
 impl<const N: usize> fmt::Display for FixedStr<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
 
+/// Allows a FixedStr to be referenced as a byte slice.
 impl<const N: usize> AsRef<[u8]> for FixedStr<N> {
     fn as_ref(&self) -> &[u8] {
         &self.data
     }
 }
 
+/// Allows a FixedStr to be referenced as a str (using its effective string).
 impl<const N: usize> AsRef<str> for FixedStr<N> {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
+/// Implements Borrow<str> for FixedStr, returning the effective string.
 impl<const N: usize> Borrow<str> for FixedStr<N> {
     fn borrow(&self) -> &str {
         self.as_str()
     }
 }
 
+/// Provides a default FixedStr where all bytes are zero.
 impl<const N: usize> Default for FixedStr<N> {
     fn default() -> Self {
         Self { data: [0; N] }
     }
 }
 
+/// Deref returns a reference to the underlying byte array.
 impl<const N: usize> core::ops::Deref for FixedStr<N> {
     type Target = [u8];
     fn deref(&self) -> &Self::Target {
@@ -54,52 +62,54 @@ impl<const N: usize> core::ops::Deref for FixedStr<N> {
     }
 }
 
+/// Mutable Deref returns a mutable reference to the underlying byte array.
 impl<const N: usize> core::ops::DerefMut for FixedStr<N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
 }
 
+/// Attempts to construct a FixedStr from a byte slice using exact copy semantics.
+///
+/// # Errors
+/// - Returns `FixedStrError::Overflow` if the effective byte count is greater than N.
+/// - Returns `FixedStrError::InvalidUtf8` if the resulting string is not valid UTF‑8.
+///
+/// # Panics
+/// Panics if `N == 0`.
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
     type Error = FixedStrError;
-    /// Attempts to create a `FixedStr` from a byte slice.
-    ///
-    /// # Error
-    /// - `Overflow`: Thrown if the slice's effective bytes are longer than N.
-    /// - `InvalidUtf8`: Thrown if the resulting string isn't valid UTF-8.
-    ///
-    /// Returns `FixedStr` if successful.
-    ///
-    /// # Panics
-    /// Panics if `N == 0`. Zero-length strings are not supported.
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
         let buf = copy_into_buffer(slice.effective_bytes(), BufferCopyMode::Exact)?;
         let result = Self { data: buf };
-        match result.is_valid() {
-            true => Ok(result),
-            false => Err(FixedStrError::InvalidUtf8),
+        if result.is_valid() {
+            Ok(result)
+        } else {
+            Err(FixedStrError::InvalidUtf8)
         }
     }
 }
 
+/// Constructs a FixedStr from a &str using the standard constructor.
+///
+/// **Warning:** If the input contains a null byte or invalid UTF‑8, the string is truncated.
 impl<const N: usize> From<&str> for FixedStr<N> {
-    /// **Warning:** If the input string contains `\0` or invalid UTF-8 code, the rest will be truncated.
     fn from(s: &str) -> Self {
         Self::new(s)
     }
 }
 
+/// Hashes the FixedStr based only on its effective bytes (up to the first null).
 impl<const N: usize> Hash for FixedStr<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // Only hash bytes up to the first zero (the effective string)
         self.effective_bytes().hash(state);
     }
 }
 
+/// Allows iterating over the effective bytes of the FixedStr.
 impl<const N: usize> IntoIterator for FixedStr<N> {
     type Item = u8;
     type IntoIter = EffectiveBytesIter<N>;
-
     fn into_iter(self) -> Self::IntoIter {
         EffectiveBytesIter {
             data: self.data,
@@ -109,61 +119,70 @@ impl<const N: usize> IntoIterator for FixedStr<N> {
     }
 }
 
+/// Orders FixedStr values based on their effective bytes.
 impl<const N: usize> Ord for FixedStr<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Compare only the bytes up to the first zero in each `FixedStr`.
         self.effective_bytes().cmp(other.effective_bytes())
     }
 }
 
+/// Implements partial ordering for FixedStr.
 impl<const N: usize> PartialOrd for FixedStr<N> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+/// Compares a FixedStr with a &str by comparing their effective bytes.
 impl<const N: usize> PartialEq<&str> for FixedStr<N> {
     fn eq(&self, other: &&str) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a &str with a FixedStr.
 impl<const N: usize> PartialEq<FixedStr<N>> for &str {
     fn eq(&self, other: &FixedStr<N>) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a FixedStr with a byte slice.
 impl<const N: usize> PartialEq<[u8]> for FixedStr<N> {
     fn eq(&self, other: &[u8]) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a byte slice with a FixedStr.
 impl<const N: usize> PartialEq<FixedStr<N>> for [u8] {
     fn eq(&self, other: &FixedStr<N>) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a FixedStr with a reference to a byte slice.
 impl<const N: usize> PartialEq<&[u8]> for FixedStr<N> {
     fn eq(&self, other: &&[u8]) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a reference to a byte slice with a FixedStr.
 impl<const N: usize> PartialEq<FixedStr<N>> for &[u8] {
     fn eq(&self, other: &FixedStr<N>) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a FixedStr with a fixed-size byte array.
 impl<const N: usize> PartialEq<[u8; N]> for FixedStr<N> {
     fn eq(&self, other: &[u8; N]) -> bool {
         self.effective_bytes() == other.effective_bytes()
     }
 }
 
+/// Compares a fixed-size byte array with a FixedStr.
 impl<const N: usize> PartialEq<FixedStr<N>> for [u8; N] {
     fn eq(&self, other: &FixedStr<N>) -> bool {
         self.effective_bytes() == other.effective_bytes()

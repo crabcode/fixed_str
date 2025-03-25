@@ -3,25 +3,28 @@
 //! A fixed–capacity, null–padded UTF‑8 string type for predictable layout and safe truncation.
 //!
 //! `FixedStr<N>` always stores exactly `N` bytes in a `[u8; N]` array.
-//! Visible content ends at the first `\0`, forming the **effective string**—used for comparisons, hashing, and display.
+//! The visible content is defined as the bytes up to the first null byte (`\0`), which is used for
+//! comparisons, hashing, and display.
 //!
 //! # Behavior
-//! - **Shorter input** → null-padded to fill the buffer.
-//! - **Longer input** → truncated safely at the last valid UTF-8 boundary.
-//! - **`\0` in input** → string terminates there; remaining content is ignored.
+//! - **Shorter input:** Input that is shorter than `N` is null‑padded to fill the buffer.
+//! - **Longer input:** Input that exceeds `N` is safely truncated at the last valid UTF‑8 boundary.
+//! - **Null byte in input:** If a null byte is present in the input, the effective string ends there,
+//!   and any subsequent bytes are ignored.
 //!
 //! # Philosophy
-//! - **String-first semantics:** Treats the content as a true string, not just a byte buffer.
-//! - **Lossy by default:** Truncation favors UTF‑8 correctness over byte preservation.
-//! - **Strict by choice:** `TryFrom`, `FixedStrBuf`, and unsafe methods offer stricter control.
-//! - **Const-ready:** Use [`FixedStr::new_const`] for compile-time construction (with silent truncation).
+//! - **String-first semantics:** The type treats the content as a genuine string rather than merely a raw byte array.
+//! - **Lossy by default:** Truncation prioritizes preserving valid UTF‑8 over preserving every byte.
+//! - **Strict by choice:** Methods like `TryFrom`, the builder (`FixedStrBuf`), and unsafe functions provide stricter control when needed.
+//! - **Const-ready:** Use [`FixedStr::new_const`] for compile-time construction, which performs silent truncation.
 //!
-//! Also includes:
-//! - [`FixedStrBuf<N>`]: a builder with boundary-aware methods like `try_push_str()` and `push_str_lossy()`
-//! - Support for `serde`, `binrw`, and `no_std` environments.
+//! Also included:
+//! - [`FixedStrBuf<N>`]: A builder for incrementally constructing `FixedStr` values with boundary-aware methods such as `try_push_str()` and `push_str_lossy()`.
+//! - Optional integrations for `serde`, `binrw`, and support for `no_std` environments.
 
 #![deny(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
+
 use core::{
     borrow::Borrow,
     cmp::Ordering,
@@ -36,19 +39,19 @@ use std::string::String;
 #[cfg(feature = "std")]
 use std::vec::Vec;
 
-/// A trait to expose the string's non-zero bytes.
+/// Exposes the effective (non‑zero) bytes of a `FixedStr`.
 pub mod effective_bytes;
-/// A builder in `FixedStrBuf`.
+/// Provides the builder type `FixedStrBuf` for constructing fixed‑capacity strings.
 pub mod fs_buffer;
-/// The core `FixedStr` library.
+/// Contains the core implementation of the `FixedStr` type.
 pub mod fs_core;
-/// Custom error type for `FixedStr`.
+/// Defines custom error types for the `FixedStr` library.
 pub mod fs_error;
-/// Implementations for `FixedStr`.
+/// Implements various trait implementations for `FixedStr`.
 pub mod fs_impl;
-/// Optional integrations with `binrw` or `serde`.
+/// Provides optional integrations for binary and serialization support (`binrw` and `serde`).
 pub mod serialize_ext;
-/// Helper functions.
+/// Contains helper functions for byte copying, UTF‑8 boundary detection, and hex formatting.
 pub mod string_helpers;
 
 pub use effective_bytes::{EffectiveBytes, EffectiveBytesIter};

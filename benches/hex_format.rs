@@ -3,12 +3,13 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use fixed_str::fast_format_hex;
 
-/// Generate some dummy data.
+/// Generates dummy data: a vector of 1024 bytes cycling through 0 to 255.
 fn generate_input() -> Vec<u8> {
     (0..1024).map(|i| (i % 256) as u8).collect()
 }
 
-/// The no-std fast formatter.
+/// Benchmarks the `fast_format_hex` function, which formats a byte slice into a hexadecimal string
+/// using a no‑std–friendly fast formatter.
 fn bench_fast_format_hex(c: &mut Criterion) {
     let bytes = generate_input();
     c.bench_function("fast_format_hex", |b| {
@@ -18,7 +19,8 @@ fn bench_fast_format_hex(c: &mut Criterion) {
     });
 }
 
-/// The standard `format!("{:02X}", b)` with String allocation
+/// Benchmarks the standard formatting approach using the `format!("{:02X}", b)` macro,
+/// which allocates a new String for the output.
 fn bench_std_format_hex(c: &mut Criterion) {
     let bytes = generate_input();
     c.bench_function("std_format_hex", |b| {

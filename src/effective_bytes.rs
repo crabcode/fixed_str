@@ -2,9 +2,10 @@
 
 use super::*;
 
-/// A trait that extracts the effective bytes from the type, i.e. up until the first `\0`.
+/// A trait for extracting the effective bytes from a value.
+/// The effective bytes are defined as all bytes up until the first null byte (`\0`).
 pub trait EffectiveBytes {
-    /// Returns the effective bytes up until the first `\0`.
+    /// Returns the effective bytes up until the first null byte.
     fn effective_bytes(&self) -> &[u8];
 }
 
@@ -55,7 +56,8 @@ impl EffectiveBytes for String {
 //  Iterator
 //******************************************************************************
 
-/// Iterator that stops at the first `\0`, looking at only the effective string.
+/// An iterator over the effective bytes of a fixed‑capacity string,
+/// stopping at the first null byte.
 pub struct EffectiveBytesIter<const N: usize> {
     pub(super) data: [u8; N],
     pub(super) index: usize,

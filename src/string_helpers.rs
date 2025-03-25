@@ -3,28 +3,28 @@
 #[cfg(feature = "memchr")]
 use memchr::memchr;
 
-/// An enum to select copy mode.
+/// Specifies how bytes should be copied from a source slice into a fixed‑size buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferCopyMode {
-    /// Requires that the source fits entirely into the buffer. Panics otherwise.
+    /// Requires that the source fits entirely into the buffer. If not, the function panics.
     Exact,
-    /// Copies up to the capacity, discarding any extra bytes. UTF-8 validity is not checked.
+    /// Copies up to the capacity, discarding any extra bytes. UTF‑8 validity is not checked.
     Slice,
-    /// Copies up to the capacity, truncating safely for UTF-8 validity.
+    /// Copies as many valid UTF‑8 bytes as possible, truncating the source safely if it exceeds the capacity.
     Truncate,
 }
 
-/// Enforces `FixedStr` capacity to be greater than zero.
+/// Ensures that the provided capacity is greater than zero.
 ///
 /// # Panics
-/// Panics if `N == 0`. Zero-length strings are not supported.
+/// Panics if `n == 0`, since zero‑length strings are not supported.
 pub const fn panic_on_zero(n: usize) {
     assert!(n > 0, "FixedStr capacity N must be greater than zero");
 }
 
-/// Finds the first `\0` byte in an array.
+/// Finds the index of the first null byte (`\0`) in the given slice.
 ///
-/// Returns the index of the first `\0`, or the full length if none found.
+/// Returns the index of the first null byte, or the full length of the slice if no null is found.
 pub fn find_first_null(bytes: &[u8]) -> usize {
     #[cfg(not(feature = "memchr"))]
     {
@@ -36,29 +36,30 @@ pub fn find_first_null(bytes: &[u8]) -> usize {
     }
 }
 
-/// Finds the largest index (up to `max_len` and the effective end) such that
-/// the slice `bytes[..index]` is valid UTF‑8. This implementation uses a binary
-/// search instead of decrementing one byte at a time.
+/// Finds the largest index (up to `max_len` and not exceeding the first null) such that
+/// the slice `bytes[..index]` is valid UTF‑8.
+///
+/// This implementation uses a binary search approach for efficiency.
 ///
 /// # Parameters
 /// - `bytes`: The input byte slice.
 /// - `max_len`: The maximum number of bytes to consider.
 ///
 /// # Returns
-/// The largest valid length.
+/// The largest index (≤ `max_len`) for which `bytes[..index]` is valid UTF‑8.
 pub fn find_valid_utf8_len(bytes: &[u8], max_len: usize) -> usize {
     // Only consider bytes up to the first null (if any)
     let effective = find_first_null(bytes);
     let upper = max_len.min(effective);
-    // If the entire prefix is valid, we’re done.
+    // If the entire prefix is valid UTF‑8, return it.
     if core::str::from_utf8(&bytes[..upper]).is_ok() {
         return upper;
     }
-    // Otherwise, use binary search on the interval [0, upper].
+    // Otherwise, perform a binary search on the interval [0, upper] to find the largest valid prefix.
     let mut low = 0;
     let mut high = upper;
     while low < high {
-        // Bias the middle upward so that low eventually reaches the maximum valid index.
+        // Bias the midpoint upward to converge on the maximum valid index.
         let mid = (low + high + 1) / 2;
         if core::str::from_utf8(&bytes[..mid]).is_ok() {
             low = mid;
@@ -69,17 +70,26 @@ pub fn find_valid_utf8_len(bytes: &[u8], max_len: usize) -> usize {
     low
 }
 
-/// Truncates a byte slice to a valid UTF‑8 string within a maximum length.
+/// Truncates a byte slice to a valid UTF‑8 string within a specified maximum length.
 ///
 /// # Returns
-/// A string slice with only valid UTF‑8 bytes.
+/// A string slice containing only valid UTF‑8 bytes from the start of `bytes` up to the maximum valid length.
 pub fn truncate_utf8_lossy(bytes: &[u8], max_len: usize) -> &str {
     let valid_len = find_valid_utf8_len(bytes, max_len);
-    // SAFETY: We have computed a length for which the slice is valid UTF‑8.
+    // SAFETY: The computed `valid_len` guarantees that `bytes[..valid_len]` is valid UTF‑8.
     unsafe { core::str::from_utf8_unchecked(&bytes[..valid_len]) }
 }
 
-/// Finds the valid string boundaries within const context.
+/// Finds the largest valid UTF‑8 boundary in the given byte slice within a constant context.
+///
+/// This function iterates through `bytes` up to `max_len` and returns the index immediately after the last complete UTF‑8 character.
+///
+/// # Parameters
+/// - `bytes`: The input byte slice.
+/// - `max_len`: The maximum number of bytes to consider.
+///
+/// # Returns
+/// The index corresponding to the end of the last valid UTF‑8 character within `max_len`.
 pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
     let mut i = 0;
     let mut last_valid = 0;
@@ -94,7 +104,7 @@ pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
         } else if (first & 0xF8) == 0xF0 {
             4
         } else {
-            break; // Invalid leading byte.
+            break; // Invalid leading byte encountered.
         };
 
         if i + width > bytes.len() {
@@ -123,11 +133,15 @@ pub const fn find_valid_boundary(bytes: &[u8], max_len: usize) -> usize {
     last_valid
 }
 
-/// Copies bytes from a source slice into a fixed-size buffer of length N.
-/// Depending on `mode`, it will either error (Exact) or truncate (Truncate) if the source is too long.
+/// Copies bytes from a source slice into a fixed‑size array of length `N`.
+///
+/// The behavior depends on the specified `mode`:
+/// - `Exact`: Requires that the source fits entirely into the buffer; otherwise, returns an overflow error.
+/// - `Slice`: Copies up to `N` bytes from the source, regardless of UTF‑8 validity.
+/// - `Truncate`: Copies as many valid UTF‑8 bytes as possible (up to `N`), truncating the source safely.
 ///
 /// # Panics
-/// Panics if `N == 0`. Zero-length strings are not supported.
+/// Panics if `N == 0` (zero‑length strings are not supported).
 pub fn copy_into_buffer<const N: usize>(
     src: &[u8],
     mode: BufferCopyMode,
@@ -151,7 +165,7 @@ pub fn copy_into_buffer<const N: usize>(
     Ok(buf)
 }
 
-/// A constant lookup table mapping every u8 to its two-character uppercase hex representation.
+/// A constant lookup table that maps each `u8` value to its two-character uppercase hexadecimal representation.
 const HEX_TABLE: [[u8; 2]; 256] = [
     *b"00", *b"01", *b"02", *b"03", *b"04", *b"05", *b"06", *b"07", *b"08", *b"09", *b"0A", *b"0B",
     *b"0C", *b"0D", *b"0E", *b"0F", *b"10", *b"11", *b"12", *b"13", *b"14", *b"15", *b"16", *b"17",
@@ -177,18 +191,21 @@ const HEX_TABLE: [[u8; 2]; 256] = [
     *b"FC", *b"FD", *b"FE", *b"FF",
 ];
 
-/// Fast hex formatter that writes into a FixedStrBuf.
+/// Formats the given byte slice as an uppercase hexadecimal string,
+/// grouping bytes as specified and inserting spaces and newlines accordingly,
+/// then returns a `FixedStr` containing the formatted output.
+/// Any unused space in the output buffer is zero‑padded.
 ///
 /// # Parameters
-/// - `bytes`: the input byte slice to format,
-/// - `group`: number of bytes per group (separated by a newline after the group is filled),
-/// - `max_lines`: optional limit to the number of output lines (if `None`, all groups are printed).
+/// - `bytes`: The input byte slice to format.
+/// - `group`: The number of bytes per group. A newline is inserted when a group is complete.
+/// - `max_lines`: An optional limit to the number of output lines. If `None`, all groups are printed.
 ///
 /// # Returns
-/// A FixedStrBuf containing the hex–formatted output. Any unused space is zeroed.
+/// A `FixedStr` containing the hex‑formatted representation of `bytes`.
 ///
 /// # Panics
-/// Panics if group == 0.
+/// Panics if `group == 0`.
 pub fn fast_format_hex<const N: usize>(
     bytes: &[u8],
     group: usize,
@@ -200,13 +217,13 @@ pub fn fast_format_hex<const N: usize>(
     let mut count_in_line = 0;
     let mut truncated = false;
 
-    // We start with the first line
+    // Start with the first line.
     let mut line_count = 1;
 
     for (i, &b) in bytes.iter().enumerate() {
         if i > 0 {
             if count_in_line == group {
-                // If a line limit is set and reached, break out
+                // If a line limit is set and reached, break out.
                 if let Some(max) = max_lines {
                     if line_count >= max {
                         break;
@@ -230,7 +247,7 @@ pub fn fast_format_hex<const N: usize>(
             }
         }
 
-        // Write two hex digits using the lookup table
+        // Write two hex digits for the current byte using the lookup table.
         if pos + 1 < N {
             let pair = HEX_TABLE[b as usize];
             buffer[pos] = pair[0];
@@ -255,18 +272,18 @@ pub fn fast_format_hex<const N: usize>(
 
     buffer[pos..N].fill(0);
 
-    // Safe due to construction
+    // Safe due to controlled construction.
     crate::FixedStrBuf { buffer, len: pos }.finalize().unwrap()
 }
 
-/// Outputs the full hex representation of `bytes` directly by invoking the provided
-/// `write` callback for each output byte.
+/// Outputs the full hexadecimal representation of `bytes` by invoking the provided callback
+/// for each output byte.
 ///
 /// # Parameters
 /// - `bytes`: The input byte slice to format.
-/// - `group`: Number of bytes per group. A newline is output after each full group.
-/// - `max_lines`: Optional limit to the number of lines (if `None`, output all bytes).
-/// - `write`: A callback which receives each output byte (e.g. sending it to console).
+/// - `group`: The number of bytes per group. A newline is inserted after each complete group.
+/// - `max_lines`: An optional limit to the number of output lines. If `None`, all lines are output.
+/// - `write`: A callback function that receives each output byte (for example, to write to a console).
 pub fn dump_as_hex(
     bytes: &[u8],
     group: usize,
@@ -302,15 +319,15 @@ pub fn dump_as_hex(
 //  Tests
 //******************************************************************************
 
-/// Test module for `string_helpers`.
+/// Test module for the string helper functions.
 #[cfg(test)]
 mod helper_tests {
     use super::*;
 
     #[test]
     fn test_truncate_utf8_lossy() {
-        // Use a multi-byte emoji and set max_len such that it would otherwise cut into the emoji.
-        let s = "d😊b"; // "a" (1 byte), "😊" (4 bytes), "b" (1 byte)
+        // Use a multi‑byte emoji such that max_len truncates before the complete character.
+        let s = "d😊b"; // "d" (1 byte), "😊" (4 bytes), "b" (1 byte)
         let bytes = s.as_bytes();
         // With max_len = 4, only "d" is valid.
         let truncated = truncate_utf8_lossy(bytes, 4);
@@ -320,9 +337,9 @@ mod helper_tests {
     #[test]
     fn test_exact_success() {
         let src = b"Hello";
-        // Since "Hello" is 5 bytes and the capacity is 10, this succeeds.
+        // Since "Hello" is 5 bytes and the capacity is 10, this should succeed.
         let buf: [u8; 10] = copy_into_buffer::<10>(src, BufferCopyMode::Exact).unwrap();
-        // The first 5 bytes match; the rest should be zero.
+        // The first 5 bytes should match; the remainder should be zero.
         assert_eq!(&buf[..5], src);
         assert_eq!(&buf[5..], &[0; 5]);
     }
@@ -337,30 +354,29 @@ mod helper_tests {
     #[test]
     fn test_truncate() {
         let src = b"Hello, world!";
-        // In Truncate mode, only the first 5 bytes will be copied.
+        // In Truncate mode, only the first 5 valid UTF‑8 bytes will be copied.
         let buf: [u8; 5] = copy_into_buffer::<5>(src, BufferCopyMode::Truncate).unwrap();
         assert_eq!(&buf, b"Hello");
     }
 
     #[test]
     fn test_fast_format_hex_full_output() {
-        // Format [0x12, 0xAB, 0x00, 0xFF] with a group size of 2 and no line limit.
+        // Format the array [0x12, 0xAB, 0x00, 0xFF] with a group size of 2 and no line limit.
         let bytes = [0x12, 0xAB, 0x00, 0xFF];
         let hex = fast_format_hex::<32>(&bytes, 2, None);
-        // Expected:
-        // "12 AB\n00 FF"
+        // Expected output: "12 AB\n00 FF"
         assert_eq!(hex, "12 AB\n00 FF");
     }
 
     #[test]
     fn test_fast_format_hex_line_limit() {
-        // Use 10 bytes of 0xFF; group them in 3 bytes per line, limit output to 2 lines.
+        // Use an array of 10 bytes of 0xFF; group them in groups of 3, and limit output to 2 lines.
         let bytes = [0xFF; 10];
         let hex = fast_format_hex::<64>(&bytes, 3, Some(2));
-        // Expected output (explanation below):
-        // - First group (line 1): three bytes → "FF FF FF"
-        // - Newline then second group (line 2): three bytes → "FF FF FF"
-        // The formatter stops before processing the fourth group.
+        // Expected output:
+        // Line 1: "FF FF FF"
+        // Line 2: "FF FF FF"
+        // The formatter stops before processing further groups.
         assert_eq!(hex, "FF FF FF\nFF FF FF");
     }
 
@@ -374,8 +390,8 @@ mod helper_tests {
     #[test]
     fn test_buffer_copy_mode_slice() {
         let input = b"Hello, world!";
-        // In Slice mode, even if the input is longer than capacity,
-        // it simply copies the first N bytes.
+        // In Slice mode, even if the input is longer than the buffer capacity,
+        // it copies only the first N bytes.
         let buf = copy_into_buffer::<5>(input, BufferCopyMode::Slice).unwrap();
         assert_eq!(&buf, b"Hello");
     }
@@ -387,7 +403,7 @@ mod helper_tests {
     }
 
     #[cfg(feature = "std")]
-    /// Helper function to collect output into a Vec<u8> for testing.
+    /// Helper function to collect output into a `Vec<u8>` for testing.
     fn collect_output(bytes: &[u8], group: usize, max_lines: Option<usize>) -> Vec<u8> {
         let mut output = Vec::new();
         dump_as_hex(bytes, group, max_lines, |b| output.push(b));
@@ -408,11 +424,11 @@ mod helper_tests {
     #[cfg(feature = "std")]
     #[test]
     fn test_debug_format_hex_line_limit() {
-        // Test with 10 bytes of 0xFF; group by 3, limit to 2 lines.
+        // Test with 10 bytes of 0xFF; group by 3 and limit to 2 lines.
         let bytes = [0xFF; 10];
         let result = collect_output(&bytes, 3, Some(2));
         let s = std::str::from_utf8(&result).unwrap();
-        // Expected: "FF FF FF\nFF FF FF" (stops after 2 lines)
+        // Expected: "FF FF FF\nFF FF FF"
         assert_eq!(s, "FF FF FF\nFF FF FF");
     }
 }

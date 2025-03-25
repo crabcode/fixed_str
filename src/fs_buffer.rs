@@ -2,10 +2,12 @@
 
 use super::*;
 
-/// A builder for incrementally constructing a FixedStr of fixed capacity.
+/// A builder for incrementally constructing a `FixedStr` with a fixed capacity.
+/// It maintains an internal byte buffer and tracks the number of bytes currently written (the effective length).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FixedStrBuf<const N: usize> {
     pub(super) buffer: [u8; N],
+    /// The number of bytes currently stored (i.e. the effective length).
     pub(super) len: usize,
 }
 
@@ -18,19 +20,19 @@ impl<const N: usize> FixedStrBuf<N> {
     pub fn remaining(&self) -> usize {
         N - self.len
     }
-    /// Returns the number of bytes currently in the buffer.
+    /// Returns the number of bytes currently written to the buffer.
     pub fn len(&self) -> usize {
         self.len
     }
-    /// Returns whether the buffer is empty.
+    /// Returns `true` if the buffer is empty (i.e. no bytes have been written).
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    /// Creates a new, empty FixedStrBuf.
+    /// Creates a new, empty `FixedStrBuf`.
     ///
     /// # Panics
-    /// Panics if `N == 0`. Zero-length strings are not supported.
+    /// Panics if `N == 0`. Zero‑length strings are not supported.
     pub const fn new() -> Self {
         panic_on_zero(N);
         Self {
@@ -39,17 +41,17 @@ impl<const N: usize> FixedStrBuf<N> {
         }
     }
 
-    /// Attempts to interpret the written portion of the buffer as a valid UTF-8 string.
+    /// Attempts to interpret the current effective bytes (up to the first null) as a valid UTF‑8 string.
     ///
-    /// Returns an error if the current contents are not valid UTF-8.
+    /// Returns an error if the effective content is not valid UTF‑8.
     pub fn try_as_str(&self) -> Result<&str, FixedStrError> {
         core::str::from_utf8(self.effective_bytes()).map_err(|_| FixedStrError::InvalidUtf8)
     }
 
-    /// Attempts to append the entire string to the buffer.
+    /// Attempts to append the entire input string to the buffer.
     ///
-    /// If the string’s byte-length is greater than the remaining capacity,
-    /// no data is pushed and an error is returned.
+    /// The function considers the effective bytes of the input (up to its first null, if any).
+    /// If the input’s byte-length exceeds the remaining capacity, no data is appended and an error is returned.
     pub fn try_push_str(&mut self, s: &str) -> Result<(), FixedStrError> {
         let bytes = s.effective_bytes();
         if bytes.len() > self.remaining() {
@@ -65,20 +67,20 @@ impl<const N: usize> FixedStrBuf<N> {
 
     /// Attempts to append a single character to the buffer.
     ///
-    /// Returns an error if the character’s UTF‑8 encoding doesn’t fit in the remaining space.
+    /// The character is first encoded in UTF‑8. Returns an error if the resulting encoding does not fit in the remaining space.
     ///
-    /// **Note:** If the character encodes to include a null byte (`\0`), any bytes after it
-    /// will be ignored when finalizing or displaying the result.
+    /// **Note:** If the UTF‑8 encoding of the character includes a null byte (`\0`),
+    /// any subsequent bytes in the encoding will be ignored when finalizing or displaying the result.
     pub fn try_push_char(&mut self, c: char) -> Result<(), FixedStrError> {
         let mut buf = [0u8; 4];
         let s = c.encode_utf8(&mut buf);
         self.try_push_str(s)
     }
 
-    /// Appends as many complete UTF‑8 characters from `s` as possible.
+    /// Appends as many complete UTF‑8 characters from the input string as possible.
     ///
-    /// If the entire string fits, it returns true. If not, it pushes only
-    /// the valid initial segment and returns false.
+    /// If the entire string fits into the remaining capacity, it returns `true`.
+    /// Otherwise, it appends only the valid initial segment (up to the last complete character) and returns `false`.
     pub fn push_str_lossy(&mut self, s: &str) -> bool {
         let remaining = self.remaining();
         let valid = if s.len() > remaining {
@@ -96,12 +98,11 @@ impl<const N: usize> FixedStrBuf<N> {
         bytes.len() == s.len()
     }
 
-    /// Finalizes the buffer into a `FixedStr`.
+    /// Finalizes the builder into a `FixedStr`.
     ///
-    /// This pads the remaining space with zeros and returns a `FixedStr`.
-    ///
-    /// **Note:** If the written content contains a null byte (`\0`), the resulting string
-    /// will terminate at that point and ignore any bytes that follow.
+    /// This method zero‑pads the unused portion of the buffer and creates a `FixedStr`
+    /// from the internal byte array. If the written content contains a null byte (`\0`),
+    /// the resulting string will terminate at that null, ignoring any bytes that follow.
     pub fn finalize(mut self) -> Result<FixedStr<N>, FixedStrError> {
         for i in self.len..N {
             self.buffer[i] = 0;
@@ -109,17 +110,17 @@ impl<const N: usize> FixedStrBuf<N> {
         Ok(FixedStr::from_bytes(self.buffer))
     }
 
-    /// Clears the builder for reuse, resetting its content to empty.
+    /// Clears the builder, resetting its effective length to zero and zero‑filling the buffer.
     pub fn clear(&mut self) {
         self.buffer.fill(0);
         self.len = 0;
     }
 
-    /// Truncates the buffer to `new_len` bytes.
+    /// Truncates the effective content of the buffer to `new_len` bytes.
     ///
-    /// If `new_len` is less than the current length, the buffer is shortened by
-    /// zeroing out the removed bytes and updating its length. If `new_len` is
-    /// greater than or equal to the current length, this method does nothing.
+    /// If `new_len` is less than the current effective length, the method zeroes out the removed portion
+    /// and updates the effective length accordingly. If `new_len` is greater than or equal to the current length,
+    /// no changes are made.
     pub fn truncate(&mut self, new_len: usize) {
         if new_len < self.len {
             for i in new_len..self.len {
@@ -129,7 +130,8 @@ impl<const N: usize> FixedStrBuf<N> {
         }
     }
 
-    /// Creates a `String` from the effective bytes.
+    /// Converts the effective bytes of the buffer to a `String` in a lossy manner,
+    /// replacing any invalid UTF‑8 sequences with the Unicode replacement character.
     #[cfg(feature = "std")]
     pub fn to_string_lossy(&self) -> String {
         String::from_utf8_lossy(self.effective_bytes()).into_owned()
@@ -155,7 +157,6 @@ impl<const N: usize> fmt::Debug for FixedStrBuf<N> {
                 f,
                 "FixedStrBuf<{}>(<invalid UTF-8>) {:?}",
                 N,
-                // Printing takes roughly 3n, so 16 * 8 * 3 as the maximum output
                 fast_format_hex::<384>(&self.buffer, 16, Some(8))
             ),
         }
@@ -163,6 +164,7 @@ impl<const N: usize> fmt::Debug for FixedStrBuf<N> {
 }
 
 impl<const N: usize> EffectiveBytes for FixedStrBuf<N> {
+    /// Returns the effective bytes (up to the first null byte) from the internal buffer.
     fn effective_bytes(&self) -> &[u8] {
         self.buffer.effective_bytes()
     }
@@ -190,10 +192,13 @@ impl<const N: usize> core::ops::Deref for FixedStrBuf<N> {
     }
 }
 
-/// Creates a `FixedStrBuf` from `FixedStr`
+/// Creates a `FixedStrBuf` from a `FixedStr`.
+///
+/// The effective length of the builder is taken from the `FixedStr` (i.e. the number
+/// of valid bytes up to the first null).
 ///
 /// # Panics
-/// Panics if `N == 0`. Zero-length strings are not supported.
+/// Panics if `N == 0`. Zero‑length strings are not supported.
 impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
     fn from(fixed: FixedStr<N>) -> Self {
         Self {
@@ -203,13 +208,15 @@ impl<const N: usize> From<FixedStr<N>> for FixedStrBuf<N> {
     }
 }
 
-/// Tries to create a `FixedStrBuf`from `&[u8]`
+/// Attempts to create a `FixedStrBuf` from a byte slice using exact copy semantics.
+///
+/// The method uses `BufferCopyMode::Exact` and computes the effective length by finding
+/// the first null byte in the copied buffer.
 ///
 /// # Panics
-/// Panics if `N == 0`. Zero-length strings are not supported.
+/// Panics if `N == 0`. Zero‑length strings are not supported.
 impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
     type Error = FixedStrError;
-    /// Attempts to create a `FixedStr` from a byte slice.
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
         let buf = copy_into_buffer(slice, BufferCopyMode::Exact)?;
         let effective_len = find_first_null(&buf);
@@ -222,7 +229,7 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStrBuf<N> {
 
 impl<const N: usize> Hash for FixedStrBuf<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // Only hash bytes up to the first zero (the effective string)
+        // Only hash the effective bytes (up to the first null) to represent the visible string.
         self.effective_bytes().hash(state);
     }
 }
@@ -238,7 +245,7 @@ impl<const N: usize> IntoIterator for FixedStrBuf<N> {
 
 impl<const N: usize> Ord for FixedStrBuf<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Compare only the bytes up to the first zero in each `FixedStr`.
+        // Compare only the effective bytes (up to the first null) of each builder.
         self.effective_bytes().cmp(other.effective_bytes())
     }
 }

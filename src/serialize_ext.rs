@@ -10,6 +10,7 @@ mod binrw_ext {
     use binrw::io::{Read, Seek, Write};
     use binrw::{BinRead, BinWrite};
 
+    /// Implements binary reading for `FixedStr` using the binrw crate.
     impl<const N: usize> BinRead for FixedStr<N> {
         type Args<'a> = ();
 
@@ -24,6 +25,7 @@ mod binrw_ext {
         }
     }
 
+    /// Implements binary writing for `FixedStr` using the binrw crate.
     impl<const N: usize> BinWrite for FixedStr<N> {
         type Args<'a> = ();
 
@@ -39,7 +41,7 @@ mod binrw_ext {
     }
 }
 
-// --- Tests ---
+// --- Tests for binrw integration ---
 #[cfg(all(test, feature = "binrw", feature = "std"))]
 mod binrw_tests {
     use crate::*;
@@ -50,12 +52,11 @@ mod binrw_tests {
         use std::io::Cursor;
 
         let original = FixedStr::<5>::new("Hello");
-        // Cursor<Vec<u8>> implements both Write and Seek
+        // Use a Cursor for both writing and reading.
         let mut cursor = Cursor::new(Vec::new());
         original
             .write_options(&mut cursor, Endian::Little, ())
             .expect("writing failed");
-        // Reset the cursor to the beginning for reading
         cursor.set_position(0);
         let read: FixedStr<5> =
             FixedStr::read_options(&mut cursor, Endian::Little, ()).expect("reading failed");
@@ -67,7 +68,6 @@ mod binrw_tests {
 //  Serde Serialization
 //******************************************************************************
 
-/// Test module for `serde` integration.
 #[cfg(feature = "serde")]
 mod serde_ext {
     use crate::*;
@@ -76,21 +76,23 @@ mod serde_ext {
     use serde::ser::Error as SerError;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+    /// Implements Serde serialization for `FixedStr`.
     impl<const N: usize> Serialize for FixedStr<N> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
             match self.try_as_str() {
-                Ok(s) => serializer.serialize_str(&s),
+                Ok(s) => serializer.serialize_str(s),
                 Err(_) => Err(S::Error::custom(FixedStrError::InvalidUtf8)),
             }
         }
     }
 
+    /// A visitor for deserializing a `FixedStr`.
     struct FixedStrVisitor<const N: usize>;
 
-    impl<'de, const N: usize> Visitor<'de> for FixedStrVisitor<N> {
+    impl<const N: usize> Visitor<'_> for FixedStrVisitor<N> {
         type Value = FixedStr<N>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -105,6 +107,7 @@ mod serde_ext {
         }
     }
 
+    /// Implements Serde deserialization for `FixedStr`.
     impl<'de, const N: usize> Deserialize<'de> for FixedStr<N> {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -115,13 +118,13 @@ mod serde_ext {
     }
 }
 
-/// Provides byte serialization for `serde`.
+/// Provides alternative (byte-based) serialization for `FixedStr` via Serde.
 #[cfg(feature = "serde")]
 pub mod serde_as_bytes {
     use crate::FixedStr;
     use serde::{Deserialize, Deserializer, Serializer};
 
-    /// Serializes `FixedStr<N>` as bytes.
+    /// Serializes a `FixedStr<N>` as raw bytes.
     pub fn serialize<S, const N: usize>(
         value: &FixedStr<N>,
         serializer: S,
@@ -132,7 +135,7 @@ pub mod serde_as_bytes {
         serializer.serialize_bytes(value.as_bytes())
     }
 
-    /// Deserializes `FixedStr<N>` from bytes.
+    /// Deserializes a `FixedStr<N>` from raw bytes.
     pub fn deserialize<'de, D, const N: usize>(deserializer: D) -> Result<FixedStr<N>, D::Error>
     where
         D: Deserializer<'de>,
@@ -142,15 +145,14 @@ pub mod serde_as_bytes {
     }
 }
 
-// --- Tests ---
-/// Test module for `serde` integration.
+// --- Tests for Serde integration ---
 #[cfg(all(test, feature = "serde"))]
 mod serde_tests {
     use crate::*;
     use serde::{Deserialize, Serialize};
     use serde_test::{assert_tokens, Token};
 
-    // Define a test struct that uses the as_bytes serialization.
+    /// A test structure to verify byte-based serialization of FixedStr.
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct ByteWrapper {
         #[serde(with = "serialize_ext::serde_as_bytes")]
@@ -163,7 +165,7 @@ mod serde_tests {
             inner: FixedStr::new("Hello"),
         };
 
-        // For a named-field struct, the tokens must include the field name.
+        // Tokens for a struct with a named field.
         assert_tokens(
             &wrapper,
             &[

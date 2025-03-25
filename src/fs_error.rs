@@ -6,20 +6,17 @@ use super::*;
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum FixedStrError {
-    /// Returned when the length of the input exceeds capacity.
+    /// Thrown when the input exceeds the available capacity.
     ///
-    /// This usually happens when converting from a byte slice or building a
-    /// `FixedStrBuf` where the provided input exceeds capacity.
-    ///
-    /// - `remaining`: The remaining free bytes in the string.
-    /// - `found`: The length of the string to be added.
+    /// - `available`: The number of bytes available in the buffer.
+    /// - `found`: The length of the input.
     Overflow {
         /// The available space in bytes.
         available: usize,
         /// The length of the input.
         found: usize,
     },
-    /// Returned when the byte content could not be parsed as valid UTF-8.
+    /// Thrown when the byte content cannot be parsed as valid UTF-8.
     InvalidUtf8,
 }
 
