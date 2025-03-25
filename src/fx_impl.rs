@@ -11,7 +11,8 @@ impl<const N: usize> fmt::Debug for FixedStr<N> {
       Err(_) => {
         #[cfg(feature = "std")]
         {
-          write!(f, "<invalid UTF-8>\n{}", self.as_hex_dump())
+          self.hex_dump();
+          Ok(())
         }
         #[cfg(not(feature = "std"))]
         {

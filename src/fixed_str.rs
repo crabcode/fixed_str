@@ -234,36 +234,24 @@ impl<const N: usize> FixedStr<N> {
   pub fn byte_iter(&self) -> impl Iterator<Item = u8> + '_ {
     self.data.iter().copied()
   }
-
-  //****************************************************************************
-  //  std Functions
-  //****************************************************************************
-
-  /// Formats a byte array into custom chunks
-  #[cfg(feature = "std")]
-  pub fn format_hex(bytes: &[u8], group: usize) -> String {
-    bytes
-      .chunks(group)
-      .map(|chunk| chunk.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" "))
-      .collect::<Vec<_>>()
-      .join("\n")
-  }
   
   /// Returns a hex–encoded string of the entire fixed buffer.
   ///
   /// Each byte is represented as a two–digit uppercase hex number.
-  #[cfg(feature = "std")]
-  pub fn as_hex(&self) -> String {
-    Self::format_hex(&self.data, self.data.len())
+  pub fn as_hex<const S: usize>(&self) -> FixedStr<S> {
+    fast_format_hex(&self.data, S, None)
   }
 
   /// Returns a formatted hex dump of the data.
   ///
   /// The bytes are grouped in 8–byte chunks, with each chunk on a new line.
-  #[cfg(feature = "std")]
-  pub fn as_hex_dump(&self) -> String {
-    Self::format_hex(&self.data, 8)
+  pub fn hex_dump(&self) {
+    
   }
+
+  //****************************************************************************
+  //  std Functions
+  //****************************************************************************
 
   /// Converts the `FixedStr` to an owned String.
   #[cfg(feature = "std")]

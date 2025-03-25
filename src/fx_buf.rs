@@ -5,8 +5,8 @@ use super::*;
 /// A builder for incrementally constructing a FixedStr of fixed capacity.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FixedStrBuf<const N: usize> {
-  buffer: [u8; N],
-  len: usize,
+  pub(super) buffer: [u8; N],
+  pub(super) len: usize,
 }
 
 impl<const N: usize> FixedStrBuf<N> {
@@ -117,17 +117,8 @@ impl<const N: usize> fmt::Display for FixedStrBuf<N> {
 impl<const N: usize> fmt::Debug for FixedStrBuf<N> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match str::from_utf8(&self.buffer[..self.len]) {
-      Ok(s) => write!(f, "FixedStrBuf<{N}>({:?})", s),
-      Err(_) => {
-        #[cfg(feature = "std")]
-        {
-          write!(f, "FixedStrBuf<{}>(<invalid UTF-8>)\n{}", N, FixedStr::<N>::format_hex(&self.buffer[..self.len], 8))
-        }
-        #[cfg(not(feature = "std"))]
-        {
-          write!(f, "FixedStrBuf<{}>(<invalid UTF-8>) {:?}", N, &self.buffer[..self.len])
-        }
-      }
+      Ok(s) => write!(f, "FixedStrBuf<{}>({:?})", N, s),
+      Err(_) => write!(f, "FixedStrBuf<{}>(<invalid UTF-8>) {:?}", N,  fast_format_hex::<N>(&self.buffer, 16, None)),
     }
   }
 }

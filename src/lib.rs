@@ -46,4 +46,5 @@ pub use string_helpers::{
   find_valid_boundary,
   truncate_utf8_lossy,
   copy_into_buffer,
+  fast_format_hex,
 };

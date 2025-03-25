@@ -247,13 +247,6 @@ mod fx_tests {
 
   #[cfg(feature = "std")]
   #[test]
-  fn test_format_hex_function() {
-      let hex = FixedStr::<4>::format_hex(&[0xDE, 0xAD, 0xBE, 0xEF], 2);
-      assert_eq!(hex, "DE AD\nBE EF");
-  }
-
-  #[cfg(feature = "std")]
-  #[test]
   fn test_transparency() {
     use std::mem::transmute;
     let arr: [u8; 5] = *b"Hey\0\0";
@@ -266,22 +259,10 @@ mod fx_tests {
   fn test_as_hex() {
     const N: usize = 5;
     let fixed = FixedStr::<N>::new("Hello");
-    let hex = fixed.as_hex();
+    // First byte needs 2 bytes, the rest 3 bytes to display: (N * 3) - 1
+    let hex: FixedStr<14> = fixed.as_hex();
     // "Hello" → [0x48, 0x65, 0x6C, 0x6C, 0x6F]
     let expected = "48 65 6C 6C 6F";
     assert_eq!(hex, expected);
-  }
-  
-  #[cfg(feature = "std")]
-  #[test]
-  fn test_as_hex_dump() {
-    // Create a FixedStr with capacity larger than the string.
-    const N: usize = 16;
-    let fixed = FixedStr::<N>::new("Hello");
-    // With group size 8, first line contains "Hello" bytes plus trailing zeros.
-    // "Hello" is 5 bytes: 48 65 6C 6C 6F, then 3 zeros → "00 00 00"
-    // Second line is all zeros.
-    let expected = "48 65 6C 6C 6F 00 00 00\n00 00 00 00 00 00 00 00";
-    assert_eq!(fixed.as_hex_dump(), expected);
   }
 }
