@@ -103,11 +103,22 @@ impl<const N: usize> FixedStrBuf<N> {
     /// This method zero‑pads the unused portion of the buffer and creates a `FixedStr`
     /// from the internal byte array. If the written content contains a null byte (`\0`),
     /// the resulting string will terminate at that null, ignoring any bytes that follow.
-    pub fn finalize(mut self) -> Result<FixedStr<N>, FixedStrError> {
-        for i in self.len..N {
-            self.buffer[i] = 0;
-        }
-        Ok(FixedStr::from_bytes(self.buffer))
+    pub fn finalize(mut self) -> FixedStr<N> {
+        self.buffer[self.len..N].fill(0);
+        FixedStr::from_bytes(self.buffer)
+    }
+
+    /// Finalizes the builder into a `FixedStr` without UTF-8 boundary checks.
+    ///
+    /// # Warning
+    /// Use with care—this may produce values that may cause conversions to panic or comparisons to fail.
+    ///
+    /// This method zero‑pads the unused portion of the buffer and creates a `FixedStr`
+    /// from the internal byte array. If the written content contains a null byte (`\0`),
+    /// the resulting string will terminate at that null, ignoring any bytes that follow.
+    pub fn finalize_unsafe(mut self) -> FixedStr<N> {
+        self.buffer[self.len..N].fill(0);
+        FixedStr::from_bytes_unsafe(self.buffer)
     }
 
     /// Clears the builder, resetting its effective length to zero and zero‑filling the buffer.
@@ -358,7 +369,7 @@ mod buffer_tests {
         // Any additional push will result in truncation.
         let result = buf.push_str_lossy(", world!");
         assert!(!result);
-        let fixed: FixedStr<5> = buf.finalize().unwrap();
+        let fixed: FixedStr<5> = buf.finalize();
         assert_eq!(fixed.as_str(), "Hello");
     }
 
@@ -366,7 +377,7 @@ mod buffer_tests {
     fn test_finalize_trailing_zeros() {
         let mut buf = FixedStrBuf::<10>::new();
         buf.try_push_str("Hi").unwrap();
-        let fixed: FixedStr<10> = buf.finalize().unwrap();
+        let fixed: FixedStr<10> = buf.finalize();
         // The effective string is "Hi" and the rest are zeros.
         assert_eq!(fixed.len(), 2);
         assert_eq!(fixed.as_str(), "Hi");
@@ -422,7 +433,7 @@ mod buffer_tests {
         buf.truncate(5);
         assert_eq!(buf.len(), 5);
         // Finalize the buffer and check that the effective string is "Hello".
-        let fixed = buf.finalize().unwrap();
+        let fixed = buf.finalize();
         assert_eq!(fixed.as_str(), "Hello");
         // Also check that the truncated portion of the buffer is zero.
         for &b in &buf.as_ref()[5..] {

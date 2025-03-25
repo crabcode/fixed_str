@@ -273,7 +273,7 @@ pub fn fast_format_hex<const N: usize>(
     buffer[pos..N].fill(0);
 
     // Safe due to controlled construction.
-    crate::FixedStrBuf { buffer, len: pos }.finalize().unwrap()
+    crate::FixedStrBuf { buffer, len: pos }.finalize()
 }
 
 /// Outputs the full hexadecimal representation of `bytes` by invoking the provided callback

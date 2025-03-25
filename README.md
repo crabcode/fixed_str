@@ -90,8 +90,8 @@ fn main() {
 - `truncate(len: usize)`: Truncate the visible portion to a specified length.
 
 ### Views & Conversions
-- `as_str() -> &str`: View the string up to the null terminator.
-- `try_as_str() -> Result<&str, FixedStrError>`: UTF‑8 checked view.
+- `as_str() -> &str`: View the string up to the null terminator or last valid UTF-8 character.
+- `try_as_str() -> Result<&str, FixedStrError>`: UTF‑8 tested view.
 - `as_bytes() -> &[u8]`: Raw byte view of the entire buffer.
 - `effective_bytes() -> &[u8]`: View of the bytes until the first `\0`.
 - `into_string() -> String`: Convert into an owned `String` (requires `std`).

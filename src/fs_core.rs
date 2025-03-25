@@ -125,7 +125,7 @@ impl<const N: usize> FixedStr<N> {
     /// when using `as_str()` or during comparisons.
     ///
     /// # Warning
-    /// Use with care—this may produce values that cause `as_str()` to panic or comparisons to fail.
+    /// Use with care—this may produce values that may cause conversions to panic or comparisons to fail.
     ///
     /// # Panics
     /// Panics if `N == 0`. Zero‑length strings are not supported.
@@ -155,7 +155,7 @@ impl<const N: usize> FixedStr<N> {
     /// The first null byte (`\0`) still acts as a terminator in conversions and comparisons.
     ///
     /// # Warning
-    /// Use with care—this may produce values that cause `as_str()` to panic or comparisons to fail.
+    /// Use with care—this may produce values that may cause conversions to panic or comparisons to fail.
     ///
     /// # Panics
     /// Panics if `N == 0`. Zero‑length strings are not supported.

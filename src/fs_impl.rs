@@ -2,10 +2,10 @@
 
 use super::*;
 
-/// Implements the Debug trait for FixedStr.
+/// Implements the Debug trait for `FixedStr`.
 ///
 /// If the effective string is valid UTF‑8, it is printed using the Debug format.
-/// Otherwise, it prints "<invalid UTF-8>" followed by a hex dump of the underlying data.
+/// Otherwise, it prints a hex dump of the underlying data.
 impl<const N: usize> fmt::Debug for FixedStr<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.try_as_str() {
@@ -19,35 +19,35 @@ impl<const N: usize> fmt::Debug for FixedStr<N> {
     }
 }
 
-/// Implements the Display trait for FixedStr by displaying its effective string.
+/// Implements the Display trait for `FixedStr` by displaying its effective string.
 impl<const N: usize> fmt::Display for FixedStr<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
 
-/// Allows a FixedStr to be referenced as a byte slice.
+/// Allows a `FixedStr` to be referenced as a byte slice.
 impl<const N: usize> AsRef<[u8]> for FixedStr<N> {
     fn as_ref(&self) -> &[u8] {
         &self.data
     }
 }
 
-/// Allows a FixedStr to be referenced as a str (using its effective string).
+/// Allows a `FixedStr` to be referenced as a `str` (using its effective string).
 impl<const N: usize> AsRef<str> for FixedStr<N> {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
-/// Implements Borrow<str> for FixedStr, returning the effective string.
+/// Implements `Borrow<str>` for `FixedStr`, returning the effective string.
 impl<const N: usize> Borrow<str> for FixedStr<N> {
     fn borrow(&self) -> &str {
         self.as_str()
     }
 }
 
-/// Provides a default FixedStr where all bytes are zero.
+/// Provides a default `FixedStr` where all bytes are zero.
 impl<const N: usize> Default for FixedStr<N> {
     fn default() -> Self {
         Self { data: [0; N] }
@@ -96,6 +96,15 @@ impl<const N: usize> core::convert::TryFrom<&[u8]> for FixedStr<N> {
 impl<const N: usize> From<&str> for FixedStr<N> {
     fn from(s: &str) -> Self {
         Self::new(s)
+    }
+}
+
+/// Constructs a FixedStr from a &str using the standard constructor.
+///
+/// **Warning:** If the input contains a null byte or invalid UTF‑8, the string is truncated.
+impl<const N: usize> From<FixedStrBuf<N>> for FixedStr<N> {
+    fn from(buf: FixedStrBuf<N>) -> Self {
+        buf.finalize()
     }
 }
 

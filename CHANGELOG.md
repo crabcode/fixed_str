@@ -6,20 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **`truncate(len)` method:** Added `truncate()` to `FixedStr` and `FixedStrBuf` for shortening visible string length in-place.
+- **`finalize_unsafe()` method:** for cases requiring direct construction without UTF‑8 validation.
 
 ### Changed
 - **Updated crate-level and function-level docs** for clarity, accuracy, and consistency with actual behavior.
-- **Corrected misleading note** on `FixedStr::new_const` to reflect that UTF‑8 is now always respected, even at compile time.
+- **`FixedStrBuf::finalize()` now returns `FixedStr` directly** (was `Result`), reflecting that `finalize()` only produces valid UTF‑8.
+- **Implemented `From<FixedStrBuf<N>> for FixedStr<N>`** for ergonomic conversion from builder to fixed string.
 - Improved descriptions for `from_bytes`, `set_lossy`, and other modifiers to better reflect truncation and null-termination behavior.
-
+    
 ### Removed
 - `FixedStr::as_hex()` and `FixedStr::hex_dump()`: Removed from the core type to avoid side effects and formatting logic in core APIs.
 
   Hex formatting is still available via the `fast_format_hex()` and `dump_as_hex()` helper functions for manual use.
 
 ### Fixed
-- Corrected docblocks and comments referring to outdated runtime validation behavior.
+- **Corrected misleading note** on `FixedStr::new_const` to reflect that UTF‑8 is now always respected, even at compile time.
 - Corrected the conversion implementations for `FixedStrBuf` (from `FixedStr` and via `TryFrom<&[u8]>`) so that the effective length (up to the first null byte) is used rather than the full array capacity. This ensures that builder operations such as appending and truncating behave correctly.
+- Corrected docblocks and comments referring to outdated runtime validation behavior.
 
 
 ## [0.9.0] - 2025-03-25
