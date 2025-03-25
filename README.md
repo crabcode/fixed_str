@@ -1,6 +1,6 @@
 # fixed_str
 
-[![Crates.io](https://img.shields.io/crates/v/fixed_str)](https://crates.io/crates/fixed_str) [![Docs.rs](https://docs.rs/fixed_str/badge.svg)](https://docs.rs/fixed_str) [![License: MIT OR Apache-2.0](https://img.shields.io/crates/l/fixed_str)](LICENSE-APACHE)
+[![Crates.io](https://img.shields.io/crates/v/fixed_str)](https://crates.io/crates/fixed_str) [![Docs.rs](https://docs.rs/fixed_str/badge.svg)](https://docs.rs/fixed_str) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **fixed_str** is a Rust crate that provides fixed–capacity, null–padded UTF‑8 string types designed for performance–critical, memory–sensitive, or FFI contexts. With predictable layout and safe UTF‑8 handling, it’s ideal for embedded applications, binary serialization, and other environments where precise control over memory is paramount.
 
