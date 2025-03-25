@@ -1,12 +1,12 @@
 [package]
-name = "fixed_string"
+name = "fixed_str"
 description = "Fixed-size, null-padded UTF-8 string type with const-safe construction and binary serialization support."
 version = "0.9.0"
 edition = "2021"
 rust-version = "1.60"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/crabcode/fixed_string"
+repository = "https://github.com/crabcode/fixed_str"
 keywords = ["string", "utf8", "fixed-length", "no_std", "binrw"]
 categories = ["data-structures", "encoding", "no-std"]
 

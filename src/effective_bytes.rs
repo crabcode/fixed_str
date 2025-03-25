@@ -1,4 +1,4 @@
-// fixed_string/src/effective_bytes.rs
+// fixed_str/src/effective_bytes.rs
 
 use super::*;
 

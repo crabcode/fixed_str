@@ -1,4 +1,4 @@
-// fixed_string/src/lib.rs
+// fixed_str/src/lib.rs
 
 //! A fixed–length, null–padded UTF‑8 string type.
 //!
@@ -26,23 +26,23 @@ use std::vec::Vec;
 
 /// A trait to expose the string's non-zero bytes.
 pub mod effective_bytes;
-/// The core `FixedStr` library.
-pub mod fixed_str;
 /// A builder in `FixedStrBuf`.
-pub mod fx_buf;
+pub mod fs_buffer;
+/// The core `FixedStr` library.
+pub mod fs_core;
 /// Custom error type for `FixedStr`.
-pub mod fx_error;
+pub mod fs_error;
 /// Implementations for `FixedStr`.
-pub mod fx_impl;
+pub mod fs_impl;
 /// Optional integrations with `binrw` or `serde`.
 pub mod serialize_ext;
 /// Helper functions.
 pub mod string_helpers;
 
 pub use effective_bytes::{EffectiveBytes, EffectiveBytesIter};
-pub use fixed_str::FixedStr;
-pub use fx_buf::FixedStrBuf;
-pub use fx_error::FixedStrError;
+pub use fs_buffer::FixedStrBuf;
+pub use fs_core::FixedStr;
+pub use fs_error::FixedStrError;
 pub use string_helpers::{
     copy_into_buffer, dump_as_hex, fast_format_hex, find_first_null, find_valid_boundary,
     find_valid_utf8_len, panic_on_zero, truncate_utf8_lossy, BufferCopyMode,

@@ -1,8 +1,8 @@
-// fixed_string/tests/fx_tests.rs
+// fixed_str/tests/fs_tests.rs
 
 #[cfg(test)]
-mod fx_tests {
-    use fixed_string::*;
+mod fs_tests {
+    use fixed_str::*;
 
     #[test]
     fn test_new_exact() {

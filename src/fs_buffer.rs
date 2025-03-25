@@ -1,4 +1,4 @@
-// fixed_string/src/fx_buf.rs
+// fixed_str/src/fs_buf.rs
 
 use super::*;
 

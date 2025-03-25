@@ -1,12 +1,12 @@
-# fixed_string
+# fixed_str
 
-[![Crates.io](https://img.shields.io/crates/v/fixed_string)](https://crates.io/crates/fixed_string) [![Docs.rs](https://docs.rs/fixed_string/badge.svg)](https://docs.rs/fixed_string) [![License](https://img.shields.io/crates/l/fixed_string)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/fixed_str)](https://crates.io/crates/fixed_str) [![Docs.rs](https://docs.rs/fixed_str/badge.svg)](https://docs.rs/fixed_str) [![License](https://img.shields.io/crates/l/fixed_str)](LICENSE)
 
-**fixed_string** is a Rust crate that provides fixed–capacity, null–padded UTF‑8 string types designed for performance–critical, memory–sensitive, or FFI contexts. With predictable layout and safe UTF‑8 handling, it’s ideal for embedded applications, binary serialization, and other environments where precise control over memory is paramount.
+**fixed_str** is a Rust crate that provides fixed–capacity, null–padded UTF‑8 string types designed for performance–critical, memory–sensitive, or FFI contexts. With predictable layout and safe UTF‑8 handling, it’s ideal for embedded applications, binary serialization, and other environments where precise control over memory is paramount.
 
 ## Overview
 
-`fixed_string` introduces a primary type, `FixedStr<N>`, which uses a `[u8; N]` array as its internal storage. Unused bytes are zero–padded and the first null byte (`\0`) serves as the string terminator.
+`fixed_str` introduces a primary type, `FixedStr<N>`, which uses a `[u8; N]` array as its internal storage. Unused bytes are zero–padded and the first null byte (`\0`) serves as the string terminator.
 
 The null byte terminator (`\0`) also forms the basis for all conversion and comparison, considering the effective string rather than the underlying fixed-size byte array.
 
@@ -27,13 +27,13 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-fixed_string = "0.9"
+fixed_str = "0.9"
 ```
 
 Or run:
 
 ```vim
-cargo add fixed_string [--feature serde]
+cargo add fixed_str [--feature serde]
 ```
 
 Optional feature flags include:
@@ -47,7 +47,7 @@ Optional feature flags include:
 ### Creating a Fixed String
 
 ```rust
-use fixed_string::FixedStr;
+use fixed_str::FixedStr;
 
 fn main() {
     // Create a FixedStr with 10 bytes of storage.
@@ -60,7 +60,7 @@ fn main() {
 ### Using the Builder: `FixedStrBuf`
 
 ```rust
-use fixed_string::{FixedStrBuf, FixedStr};
+use fixed_str::{FixedStrBuf, FixedStr};
 
 fn main() {
     let mut buf = FixedStrBuf::<12>::new();
@@ -103,6 +103,6 @@ This project is dual–licensed under either the MIT license or the Apache Licen
 
 ## Links
 
-- [Crate on crates.io](https://crates.io/crates/fixed_string)
-- [Documentation on docs.rs](https://docs.rs/fixed_string)
-- [GitHub Repository](https://github.com/crabcode/fixed_string)
+- [Crate on crates.io](https://crates.io/crates/fixed_str)
+- [Documentation on docs.rs](https://docs.rs/fixed_str)
+- [GitHub Repository](https://github.com/crabcode/fixed_str)

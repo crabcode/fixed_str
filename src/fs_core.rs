@@ -1,4 +1,4 @@
-// fixed_string/src/fixed_str.rs
+// fixed_str/src/fixed_str.rs
 
 use super::*;
 
@@ -10,7 +10,7 @@ use super::*;
 ///
 /// # Examples
 /// ```
-/// use fixed_string::FixedStr;
+/// use fixed_str::FixedStr;
 ///
 /// let fs = FixedStr::<5>::new("Hello");
 /// assert_eq!(fs.as_str(), "Hello");
@@ -29,7 +29,7 @@ pub struct FixedStr<const N: usize> {
 ///
 /// # Examples
 /// ```
-/// use fixed_string::FixedStr;
+/// use fixed_str::FixedStr;
 ///
 /// let fs = FixedStr::<5>::new("Hello");
 /// assert_eq!(fs.as_str(), "Hello");
@@ -65,7 +65,7 @@ impl<const N: usize> FixedStr<N> {
     ///
     /// # Examples
     /// ```
-    /// use fixed_string::FixedStr;
+    /// use fixed_str::FixedStr;
     ///
     /// // "Hello" fits exactly in a buffer of 5 bytes.
     /// let fs = FixedStr::<5>::new("Hello");
@@ -196,7 +196,7 @@ impl<const N: usize> FixedStr<N> {
     ///
     /// # Examples
     ///
-    /// use fixed_string::FixedStr;
+    /// use fixed_str::FixedStr;
     ///
     /// let mut fs = FixedStr::<5>::new("Hello");
     /// fs.set_lossy("World!");

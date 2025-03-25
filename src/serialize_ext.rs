@@ -1,4 +1,4 @@
-// fixed_string/src/serialize_ext.rs
+// fixed_str/src/serialize_ext.rs
 
 //******************************************************************************
 //  BinRW Serialization
