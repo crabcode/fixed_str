@@ -319,79 +319,100 @@ mod helper_tests {
 
   #[test]
   fn test_exact_success() {
-      let src = b"Hello";
-      // Since "Hello" is 5 bytes and the capacity is 10, this succeeds.
-      let buf: [u8; 10] = copy_into_buffer::<10>(src, BufferCopyMode::Exact).unwrap();
-      // The first 5 bytes match; the rest should be zero.
-      assert_eq!(&buf[..5], src);
-      assert_eq!(&buf[5..], &[0; 5]);
+    let src = b"Hello";
+    // Since "Hello" is 5 bytes and the capacity is 10, this succeeds.
+    let buf: [u8; 10] = copy_into_buffer::<10>(src, BufferCopyMode::Exact).unwrap();
+    // The first 5 bytes match; the rest should be zero.
+    assert_eq!(&buf[..5], src);
+    assert_eq!(&buf[5..], &[0; 5]);
   }
 
   #[test]
   fn test_exact_overflow() {
-      let src = b"Hello, world!";
-      let res = copy_into_buffer::<5>(src, BufferCopyMode::Exact);
-      assert!(res.is_err());
+    let src = b"Hello, world!";
+    let res = copy_into_buffer::<5>(src, BufferCopyMode::Exact);
+    assert!(res.is_err());
   }
 
   #[test]
   fn test_truncate() {
-      let src = b"Hello, world!";
-      // In Truncate mode, only the first 5 bytes will be copied.
-      let buf: [u8; 5] = copy_into_buffer::<5>(src, BufferCopyMode::Truncate).unwrap();
-      assert_eq!(&buf, b"Hello");
+    let src = b"Hello, world!";
+    // In Truncate mode, only the first 5 bytes will be copied.
+    let buf: [u8; 5] = copy_into_buffer::<5>(src, BufferCopyMode::Truncate).unwrap();
+    assert_eq!(&buf, b"Hello");
   }
 
   #[test]
   fn test_fast_format_hex_full_output() {
-      // Format [0x12, 0xAB, 0x00, 0xFF] with a group size of 2 and no line limit.
-      let bytes = [0x12, 0xAB, 0x00, 0xFF];
-      let hex = fast_format_hex::<32>(&bytes, 2, None);
-      // Expected:
-      // "12 AB\n00 FF"
-      assert_eq!(hex, "12 AB\n00 FF");
+    // Format [0x12, 0xAB, 0x00, 0xFF] with a group size of 2 and no line limit.
+    let bytes = [0x12, 0xAB, 0x00, 0xFF];
+    let hex = fast_format_hex::<32>(&bytes, 2, None);
+    // Expected:
+    // "12 AB\n00 FF"
+    assert_eq!(hex, "12 AB\n00 FF");
   }
 
   #[test]
   fn test_fast_format_hex_line_limit() {
-      // Use 10 bytes of 0xFF; group them in 3 bytes per line, limit output to 2 lines.
-      let bytes = [0xFF; 10];
-      let hex = fast_format_hex::<64>(&bytes, 3, Some(2));
-      // Expected output (explanation below):
-      // - First group (line 1): three bytes → "FF FF FF"
-      // - Newline then second group (line 2): three bytes → "FF FF FF"
-      // The formatter stops before processing the fourth group.
-      assert_eq!(hex, "FF FF FF\nFF FF FF");
+    // Use 10 bytes of 0xFF; group them in 3 bytes per line, limit output to 2 lines.
+    let bytes = [0xFF; 10];
+    let hex = fast_format_hex::<64>(&bytes, 3, Some(2));
+    // Expected output (explanation below):
+    // - First group (line 1): three bytes → "FF FF FF"
+    // - Newline then second group (line 2): three bytes → "FF FF FF"
+    // The formatter stops before processing the fourth group.
+    assert_eq!(hex, "FF FF FF\nFF FF FF");
   }
 
+  #[test]
+  #[should_panic]
+  fn test_panic_on_zero() {
+    // This should panic because the capacity is zero.
+    let _ = crate::FixedStr::<0>::new("test");
+  }
+
+  #[test]
+  fn test_buffer_copy_mode_slice() {
+    let input = b"Hello, world!";
+    // In Slice mode, even if the input is longer than capacity,
+    // it simply copies the first N bytes.
+    let buf = copy_into_buffer::<5>(input, BufferCopyMode::Slice).unwrap();
+    assert_eq!(&buf, b"Hello");
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_fast_format_hex_with_zero_group() {
+    let _ = fast_format_hex::<32>(b"Test", 0, None);
+  }
 
   #[cfg(feature = "std")]
   /// Helper function to collect output into a Vec<u8> for testing.
   fn collect_output(bytes: &[u8], group: usize, max_lines: Option<usize>) -> Vec<u8> {
-      let mut output = Vec::new();
-      dump_as_hex(bytes, group, max_lines, |b| output.push(b));
-      output
+    let mut output = Vec::new();
+    dump_as_hex(bytes, group, max_lines, |b| output.push(b));
+    output
   }
 
   #[cfg(feature = "std")]
   #[test]
   fn test_debug_format_hex_full_output() {
-      // Test with a small array and full output.
-      let bytes = [0x12, 0xAB, 0x00, 0xFF];
-      let result = collect_output(&bytes, 2, None);
-      let s = std::str::from_utf8(&result).unwrap();
-      // Expected: "12 AB\n00 FF"
-      assert_eq!(s, "12 AB\n00 FF");
+    // Test with a small array and full output.
+    let bytes = [0x12, 0xAB, 0x00, 0xFF];
+    let result = collect_output(&bytes, 2, None);
+    let s = std::str::from_utf8(&result).unwrap();
+    // Expected: "12 AB\n00 FF"
+    assert_eq!(s, "12 AB\n00 FF");
   }
 
   #[cfg(feature = "std")]
   #[test]
   fn test_debug_format_hex_line_limit() {
-      // Test with 10 bytes of 0xFF; group by 3, limit to 2 lines.
-      let bytes = [0xFF; 10];
-      let result = collect_output(&bytes, 3, Some(2));
-      let s = std::str::from_utf8(&result).unwrap();
-      // Expected: "FF FF FF\nFF FF FF" (stops after 2 lines)
-      assert_eq!(s, "FF FF FF\nFF FF FF");
+    // Test with 10 bytes of 0xFF; group by 3, limit to 2 lines.
+    let bytes = [0xFF; 10];
+    let result = collect_output(&bytes, 3, Some(2));
+    let s = std::str::from_utf8(&result).unwrap();
+    // Expected: "FF FF FF\nFF FF FF" (stops after 2 lines)
+    assert_eq!(s, "FF FF FF\nFF FF FF");
   }
 }

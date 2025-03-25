@@ -333,6 +333,29 @@ mod buffer_tests {
     assert_eq!(buf.len(), 4);
     assert_eq!(&buf[..4], b"Rust");
   }
+
+  #[test]
+  fn test_fixed_str_buf_try_from_slice() {
+    let input = b"Hello!";
+    // FixedStrBuf uses BufferCopyMode::Exact in its TryFrom implementation.
+    // Since the input is longer than the buffer capacity, this should error.
+    let result = FixedStrBuf::<5>::try_from(&input[..]);
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_fixed_str_buf_ordering() {
+    let mut buf1 = FixedStrBuf::<10>::new();
+    let mut buf2 = FixedStrBuf::<10>::new();
+    buf1.try_push_str("Apple").unwrap();
+    buf2.try_push_str("Banana").unwrap();
+
+    assert!(buf1 < buf2);
+
+    let mut buf3 = FixedStrBuf::<10>::new();
+    buf3.try_push_str("Apple").unwrap();
+    assert_eq!(buf1, buf3);
+  }
   
   #[cfg(feature = "std")]
   #[test]

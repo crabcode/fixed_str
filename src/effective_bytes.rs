@@ -81,9 +81,23 @@ impl<const N: usize> Iterator for EffectiveBytesIter<N> {
 //******************************************************************************
 
 #[cfg(test)]
-#[test]
-fn test_effective_bytes() {
-  let fixed = FixedStr::<10>::new("Hi");
-  let bytes = fixed.effective_bytes();
-  assert_eq!(bytes, b"Hi");
+mod effbyte_tests {
+  use super::*;
+
+  #[test]
+  fn test_effective_bytes_trait() {
+    let fixed = FixedStr::<10>::new("Hi");
+    let bytes = fixed.effective_bytes();
+    assert_eq!(bytes, b"Hi");
+
+    // For a byte slice with an embedded null, effective_bytes stops at the first zero.
+    let slice: &[u8] = b"abc\0def";
+    let effective = slice.effective_bytes();
+    assert_eq!(effective, b"abc");
+
+    // For &str, effective_bytes should simply return the full UTF‑8 bytes.
+    let s = "hello";
+    let effective_str = s.effective_bytes();
+    assert_eq!(effective_str, b"hello");
+  }
 }
