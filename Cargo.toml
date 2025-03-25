@@ -30,6 +30,9 @@ serde_test = "1.0"
 [badges]
 maintenance = { status = "as-is" }
 
+[package.metadata.docs.rs]
+all-features = true
+
 [[bench]]
 name = "hex_format"
 harness = false
