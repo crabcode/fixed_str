@@ -190,7 +190,11 @@ const HEX_TABLE: [[u8; 2]; 256] = [
 /// 
 /// # Returns
 /// A FixedStrBuf containing the hex–formatted output. Any unused space is zeroed.
+/// 
+/// # Panics
+/// Panics if group == 0.
 pub fn fast_format_hex<const N: usize>(bytes: &[u8], group: usize, max_lines: Option<usize>) -> crate::FixedStr<N> {
+  assert!(group > 0, "Group number needs to be greater than zero");
   let mut buffer = [0u8; N];
   let mut pos = 0;
   let mut count_in_line = 0;
@@ -269,6 +273,7 @@ pub fn fast_format_hex<const N: usize>(bytes: &[u8], group: usize, max_lines: Op
 /// - `max_lines`: Optional limit to the number of lines (if `None`, output all bytes).
 /// - `write`: A callback which receives each output byte (e.g. sending it to console).
 pub fn dump_as_hex(bytes: &[u8], group: usize, max_lines: Option<usize>, mut write: impl FnMut(u8)) {
+  assert!(group > 0, "Group number needs to be greater than zero");
   let mut count_in_line = 0;
   let mut line_count = 1;
   for (i, &b) in bytes.iter().enumerate() {

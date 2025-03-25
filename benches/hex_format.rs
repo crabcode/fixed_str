@@ -1,3 +1,5 @@
+// fixed_string/benches/hex_format.rs
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use fixed_string::fast_format_hex;
 
